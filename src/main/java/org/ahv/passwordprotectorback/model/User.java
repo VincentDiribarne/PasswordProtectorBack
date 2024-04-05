@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Getter
 @Setter
 public class User extends PersistentEntity {
-    private String name;
+    private String lastName;
     private String firstName;
     private String userName;
     private String email;

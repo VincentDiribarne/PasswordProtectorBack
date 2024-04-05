@@ -11,6 +11,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Element extends PersistentEntity {
     private String name;
     private String url;
+    private String description;
     private String userID;
     private String typeID;
 }
