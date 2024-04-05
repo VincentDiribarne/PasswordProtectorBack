@@ -9,7 +9,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 @Getter
 @Setter
 public class Password extends PersistentEntity {
-    private String password;
     private String identifier;
+    private String password;
     private String comment;
+    private String elementID;
 }
