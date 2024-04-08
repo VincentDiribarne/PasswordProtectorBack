@@ -6,7 +6,15 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class ElementRequest extends ElementUpdateRequest {
+public class ElementUpdateRequest {
     @NotBlank
-    private String userID;
+    private String name;
+
+    @NotBlank
+    private String url;
+
+    private String description;
+
+    @NotBlank
+    private String typeID;
 }

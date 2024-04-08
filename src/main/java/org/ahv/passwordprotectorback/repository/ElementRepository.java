@@ -10,6 +10,8 @@ public interface ElementRepository extends MongoRepository<Element, String> {
 
     List<Element> findAllByUrlContainingIgnoreCase(String url);
 
+    List<Element> findAllByUserID(String userID);
+
     Element findByUrl(String url);
 
     Element findByName(String name);

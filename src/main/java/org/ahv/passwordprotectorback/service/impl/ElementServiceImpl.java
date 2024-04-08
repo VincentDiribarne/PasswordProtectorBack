@@ -6,6 +6,7 @@ import org.ahv.passwordprotectorback.repository.ElementRepository;
 import org.ahv.passwordprotectorback.service.ElementService;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -14,6 +15,11 @@ public class ElementServiceImpl implements ElementService {
     private final ElementRepository elementRepository;
 
     //Global method
+    @Override
+    public List<Element> findAll() {
+        return elementRepository.findAll().stream().sorted(Comparator.comparing(Element::getName)).toList();
+    }
+
     @Override
     public Element findObjectByID(String id) {
         return elementRepository.findById(id).orElse(null);
@@ -24,6 +30,16 @@ public class ElementServiceImpl implements ElementService {
         elementRepository.save(element);
     }
 
+    @Override
+    public void delete(Element object) {
+        elementRepository.delete(object);
+    }
+
+
+    @Override
+    public List<Element> findAllByUserID(String userID) {
+        return elementRepository.findAllByUserID(userID);
+    }
 
     //ElementService methods
     @Override
@@ -44,5 +60,16 @@ public class ElementServiceImpl implements ElementService {
     @Override
     public Element findByName(String name) {
         return elementRepository.findByName(name);
+    }
+
+
+    @Override
+    public List<String> findAllName() {
+        return findAll().stream().map(Element::getName).toList();
+    }
+
+    @Override
+    public List<String> findAllURL() {
+        return findAll().stream().map(Element::getUrl).toList();
     }
 }
