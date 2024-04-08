@@ -11,7 +11,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class User extends PersistentEntity {
     private String lastName;
     private String firstName;
-    private String userName;
+    private String username;
     private String email;
     private String password;
+    private int elementCount;
 }

@@ -1,7 +1,6 @@
 package org.ahv.passwordprotectorback.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.ahv.passwordprotectorback.model.Element;
 import org.ahv.passwordprotectorback.model.Password;
 import org.ahv.passwordprotectorback.repository.PasswordRepository;
 import org.ahv.passwordprotectorback.service.PasswordService;
