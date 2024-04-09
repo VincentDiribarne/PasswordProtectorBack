@@ -4,10 +4,12 @@ import jakarta.validation.Valid;
 import org.ahv.passwordprotectorback.exchange.controller.other.ControllerAdapter;
 import org.ahv.passwordprotectorback.exchange.controller.other.GlobalController;
 import org.ahv.passwordprotectorback.exchange.request.password.PasswordRequest;
+import org.ahv.passwordprotectorback.exchange.request.password.PasswordUpdateRequest;
 import org.ahv.passwordprotectorback.exchange.response.BasicResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.BasicPasswordResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.OnlyPasswordResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.PasswordResponse;
+import org.ahv.passwordprotectorback.model.Element;
 import org.ahv.passwordprotectorback.model.Password;
 import org.ahv.passwordprotectorback.service.ElementService;
 import org.ahv.passwordprotectorback.service.PasswordService;
@@ -25,6 +27,7 @@ import java.util.List;
 @RequestMapping("/api/")
 public class PasswordController extends GlobalController<Password> {
     private final PasswordService passwordService;
+    private final ElementService elementService;
     private final ControllerAdapter adapter;
     private final NameValidator nameValidator;
 
@@ -34,6 +37,7 @@ public class PasswordController extends GlobalController<Password> {
                               UserService userService
     ) {
         this.passwordService = passwordService;
+        this.elementService = elementService;
         this.adapter = new ControllerAdapter(elementService, passwordService, typeService, userService);
         this.nameValidator = NameValidator.getInstance();
     }
@@ -46,14 +50,14 @@ public class PasswordController extends GlobalController<Password> {
     }
 
 
-    @GetMapping("/passwords/id/{id}")
+    @GetMapping("/password/id/{id}")
     @ResponseStatus(HttpStatus.OK)
     public PasswordResponse getPasswordsByID(@PathVariable String id) {
         return adapter.convertToPasswordResponse(passwordService.findObjectByID(id));
     }
 
 
-    @GetMapping("/passwords/{elementID}/name/{identifier}")
+    @GetMapping("/password/{elementID}/name/{identifier}")
     @ResponseStatus(HttpStatus.OK)
     public PasswordResponse getPasswordsByIdentifier(@PathVariable String identifier, @PathVariable String elementID) {
         return adapter.convertToPasswordResponse(passwordService.findByElementAndIdentifier(elementID, identifier));
@@ -68,54 +72,62 @@ public class PasswordController extends GlobalController<Password> {
     }
 
 
-    @PostMapping("/element")
+    @PostMapping("/password")
     @ResponseStatus(HttpStatus.CREATED)
-    public BasicResponse saveElement(@Valid @RequestBody PasswordRequest passwordRequest) {
+    public BasicResponse savePassword(@Valid @RequestBody PasswordRequest passwordRequest) {
         verification(passwordRequest, null);
 
         //TODO: Encrypt password
+
+
+        Element element = elementService.findObjectByID(passwordRequest.getElementID());
+        if (element != null) {
+            element.setPasswordCount(element.getPasswordCount() + 1);
+            elementService.save(element);
+        }
+
         return save(passwordService, adapter.convertToPassword(passwordRequest));
     }
 
 
-    @PutMapping("/element/{id}")
+    @PutMapping("/password/{id}")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public BasicResponse updateElement(@PathVariable String id, @Valid @RequestBody PasswordRequest passwordRequest) {
+    public BasicResponse updatePassword(@PathVariable String id, @Valid @RequestBody PasswordUpdateRequest passwordRequest) {
         return update(passwordRequest, id);
     }
 
 
-    @DeleteMapping("/element/{id}")
+    @DeleteMapping("/password/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public BasicResponse deleteElement(@PathVariable String id) {
+    public BasicResponse deletePassword(@PathVariable String id) {
         try {
             return delete(passwordService, id);
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting element", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting password");
         }
     }
 
 
-    private BasicResponse update(PasswordRequest passwordRequest, String id) {
+    private BasicResponse update(PasswordUpdateRequest passwordRequest, String id) {
         Password passwordToUpdate = passwordService.findObjectByID(id);
 
         if (passwordRequest != null && passwordToUpdate != null) {
             verification(passwordRequest, passwordToUpdate.getIdentifier());
 
-            passwordToUpdate.setIdentifier(getStringNotNull(passwordRequest.getIdentifier(), passwordToUpdate.getIdentifier()));
-            passwordToUpdate.setPassword(getStringNotNull(passwordRequest.getPassword(), passwordToUpdate.getPassword()));
-            passwordToUpdate.setComment(getStringNotNull(passwordRequest.getComment(), passwordToUpdate.getComment()));
+            passwordToUpdate.setIdentifier(getStringNotNull(passwordToUpdate.getIdentifier(), passwordRequest.getIdentifier()));
+            passwordToUpdate.setPassword(getStringNotNull(passwordToUpdate.getPassword(), passwordRequest.getPassword()));
+            passwordToUpdate.setComment(getStringNotNull(passwordToUpdate.getComment(), passwordRequest.getComment()));
             passwordToUpdate.setModificationDate(LocalDate.now());
 
             passwordService.save(passwordToUpdate);
 
-            return BasicResponse.builder().message("Element updated").build();
+            return BasicResponse.builder().message("Password updated").build();
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Element not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Password not found");
         }
     }
 
-    private void verification(PasswordRequest passwordRequest, String oldIdentifier) {
+    private void verification(PasswordUpdateRequest passwordRequest, String oldIdentifier) {
         if (nameValidator.isNotValid(passwordService.findAllIdentifier(), oldIdentifier, passwordRequest.getIdentifier())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identifier already exists");
         }

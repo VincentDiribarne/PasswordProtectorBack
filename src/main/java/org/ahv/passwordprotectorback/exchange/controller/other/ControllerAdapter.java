@@ -32,15 +32,23 @@ public class ControllerAdapter {
 
     //Elements
     public BasicElementResponse convertToBasicElementResponse(Element element) {
-        return BasicElementResponse.builder()
-                .name(element.getName())
-                .url(element.getUrl())
-                .passwordCount(element.getPasswordCount())
-                .build();
+        BasicElementResponse elementResponse = null;
+
+        if (element != null) {
+            elementResponse = BasicElementResponse.builder()
+                    .id(element.getId())
+                    .name(element.getName())
+                    .url(element.getUrl())
+                    .passwordCount(element.getPasswordCount())
+                    .build();
+        }
+
+        return elementResponse;
     }
 
     public ElementResponse convertToElementResponse(Element element) {
         return ElementResponse.builder()
+                .id(element.getId())
                 .name(element.getName())
                 .url(element.getUrl())
                 .passwordCount(element.getPasswordCount())
@@ -62,6 +70,7 @@ public class ControllerAdapter {
     //Passwords
     public BasicPasswordResponse convertToBasicPasswordResponse(Password password) {
         return BasicPasswordResponse.builder()
+                .id(password.getId())
                 .identifier(password.getIdentifier())
                 .comment(password.getComment())
                 .build();
@@ -75,6 +84,7 @@ public class ControllerAdapter {
 
     public PasswordResponse convertToPasswordResponse(Password password) {
         return PasswordResponse.builder()
+                .id(password.getId())
                 .identifier(password.getIdentifier())
                 .comment(password.getComment())
                 .element(
@@ -87,6 +97,7 @@ public class ControllerAdapter {
     //Type
     public TypeResponse convertToTypeResponse(Type type) {
         return TypeResponse.builder()
+                .id(type.getId())
                 .name(type.getName())
                 .build();
     }
@@ -95,6 +106,7 @@ public class ControllerAdapter {
     //User
     public BasicUserResponse convertToBasicUserResponse(User user) {
         return BasicUserResponse.builder()
+                .id(user.getId())
                 .username(user.getUsername())
                 .elementCount(user.getElementCount())
                 .build();
@@ -102,6 +114,7 @@ public class ControllerAdapter {
 
     public UserResponse convertToUserResponse(User user) {
         return UserResponse.builder()
+                .id(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .username(user.getUsername())
@@ -145,6 +158,8 @@ public class ControllerAdapter {
                     .comment(passwordRequest.getComment())
                     .elementID(passwordRequest.getElementID())
                     .build();
+
+            password.setCreationDate(LocalDate.now());
         }
 
         return password;

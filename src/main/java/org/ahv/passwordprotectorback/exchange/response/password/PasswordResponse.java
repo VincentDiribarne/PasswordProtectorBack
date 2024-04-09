@@ -9,6 +9,7 @@ import org.ahv.passwordprotectorback.exchange.response.element.BasicElementRespo
 @Setter
 @Builder
 public class PasswordResponse {
+    private String id;
     private String identifier;
     private String comment;
     private BasicElementResponse element;

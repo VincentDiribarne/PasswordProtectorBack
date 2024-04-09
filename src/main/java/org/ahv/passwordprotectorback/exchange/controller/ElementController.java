@@ -115,10 +115,11 @@ public class ElementController extends GlobalController<Element> {
         if (elementRequest != null && elementToUpdate != null) {
             verification(elementRequest, elementToUpdate.getName(), elementToUpdate.getUrl());
 
-            elementToUpdate.setName(elementRequest.getName());
-            elementToUpdate.setUrl(elementRequest.getUrl());
-            elementToUpdate.setDescription(elementRequest.getDescription());
-            elementToUpdate.setTypeID(elementRequest.getTypeID());
+            elementToUpdate.setName(getStringNotNull(elementToUpdate.getName(), elementRequest.getName()));
+            elementToUpdate.setUrl(getStringNotNull(elementToUpdate.getUrl(), elementRequest.getUrl()));
+            elementToUpdate.setDescription(getStringNotNull(elementToUpdate.getDescription(), elementRequest.getDescription()));
+            elementToUpdate.setTypeID(getStringNotNull(elementToUpdate.getTypeID(), elementRequest.getTypeID()));
+            
             elementToUpdate.setModificationDate(LocalDate.now());
             elementService.save(elementToUpdate);
 

@@ -8,6 +8,7 @@ import lombok.Setter;
 @Setter
 @Builder
 public class BasicElementResponse {
+    private String id;
     private String name;
     private String url;
     private int passwordCount;

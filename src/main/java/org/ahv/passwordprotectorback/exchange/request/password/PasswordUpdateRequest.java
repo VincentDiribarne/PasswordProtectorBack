@@ -6,7 +6,12 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class PasswordRequest extends PasswordUpdateRequest{
+public class PasswordUpdateRequest {
     @NotBlank
-    private String elementID;
+    private String identifier;
+
+    @NotBlank
+    private String password;
+
+    private String comment;
 }

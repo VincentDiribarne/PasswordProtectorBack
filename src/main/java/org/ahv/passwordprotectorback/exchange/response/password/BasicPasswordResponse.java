@@ -8,6 +8,7 @@ import lombok.Setter;
 @Setter
 @Builder
 public class BasicPasswordResponse {
+    private String id;
     private String identifier;
     private String comment;
 }

@@ -13,6 +13,7 @@ import java.util.List;
 @Setter
 @Builder
 public class ElementResponse {
+    private String id;
     private String name;
     private String url;
     private String description;
