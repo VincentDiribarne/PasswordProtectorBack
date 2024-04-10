@@ -75,11 +75,9 @@ public class PasswordController extends GlobalController<Password> {
     @PostMapping("/password")
     @ResponseStatus(HttpStatus.CREATED)
     public BasicResponse savePassword(@Valid @RequestBody PasswordRequest passwordRequest) {
-        verification(passwordRequest, null);
+        verification(passwordRequest, null, passwordRequest.getElementID());
 
         //TODO: Encrypt password
-
-
         Element element = elementService.findObjectByID(passwordRequest.getElementID());
         if (element != null) {
             element.setPasswordCount(element.getPasswordCount() + 1);
@@ -90,10 +88,10 @@ public class PasswordController extends GlobalController<Password> {
     }
 
 
-    @PutMapping("/password/{id}")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public BasicResponse updatePassword(@PathVariable String id, @Valid @RequestBody PasswordUpdateRequest passwordRequest) {
-        return update(passwordRequest, id);
+    @PutMapping("/password/elementID/{elementId}/id/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public BasicResponse updatePassword(@PathVariable String elementId, @PathVariable String id, @Valid @RequestBody PasswordUpdateRequest passwordRequest) {
+        return update(passwordRequest, elementId, id);
     }
 
 
@@ -108,11 +106,11 @@ public class PasswordController extends GlobalController<Password> {
     }
 
 
-    private BasicResponse update(PasswordUpdateRequest passwordRequest, String id) {
+    private BasicResponse update(PasswordUpdateRequest passwordRequest, String elementId, String id) {
         Password passwordToUpdate = passwordService.findObjectByID(id);
 
         if (passwordRequest != null && passwordToUpdate != null) {
-            verification(passwordRequest, passwordToUpdate.getIdentifier());
+            verification(passwordRequest, elementId, passwordToUpdate.getIdentifier());
 
             passwordToUpdate.setIdentifier(getStringNotNull(passwordToUpdate.getIdentifier(), passwordRequest.getIdentifier()));
             passwordToUpdate.setPassword(getStringNotNull(passwordToUpdate.getPassword(), passwordRequest.getPassword()));
@@ -127,8 +125,8 @@ public class PasswordController extends GlobalController<Password> {
         }
     }
 
-    private void verification(PasswordUpdateRequest passwordRequest, String oldIdentifier) {
-        if (nameValidator.isNotValid(passwordService.findAllIdentifier(), oldIdentifier, passwordRequest.getIdentifier())) {
+    private void verification(PasswordUpdateRequest passwordRequest, String elementID, String oldIdentifier) {
+        if (nameValidator.isNotValid(passwordService.findAllIdentifierByElementID(elementID), oldIdentifier, passwordRequest.getIdentifier())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identifier already exists");
         }
     }

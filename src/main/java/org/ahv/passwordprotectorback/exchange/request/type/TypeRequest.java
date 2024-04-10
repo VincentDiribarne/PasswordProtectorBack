@@ -7,4 +7,5 @@ import lombok.Setter;
 @Setter
 public class TypeRequest {
     private String name;
+    private String userID;
 }

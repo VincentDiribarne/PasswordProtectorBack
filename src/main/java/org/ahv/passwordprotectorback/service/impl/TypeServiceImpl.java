@@ -25,6 +25,16 @@ public class TypeServiceImpl implements TypeService {
         return typeRepository.findAllByNameContainingIgnoreCase(name);
     }
 
+    @Override
+    public List<Type> findAllByUserID(String userID) {
+        return typeRepository.findAllByUserIDAndUserIDIsNull(userID);
+    }
+
+    @Override
+    public List<String> findAllNamesByUserID(String userID) {
+        return findAllByUserID(userID).stream().map(Type::getName).toList();
+    }
+
 
     //Global method
     @Override

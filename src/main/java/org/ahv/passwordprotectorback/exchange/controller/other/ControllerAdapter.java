@@ -3,6 +3,9 @@ package org.ahv.passwordprotectorback.exchange.controller.other;
 import lombok.RequiredArgsConstructor;
 import org.ahv.passwordprotectorback.exchange.request.element.ElementRequest;
 import org.ahv.passwordprotectorback.exchange.request.password.PasswordRequest;
+import org.ahv.passwordprotectorback.exchange.request.type.TypeRequest;
+import org.ahv.passwordprotectorback.exchange.request.user.UserRequest;
+import org.ahv.passwordprotectorback.exchange.request.user.UserUpdateRequest;
 import org.ahv.passwordprotectorback.exchange.response.element.BasicElementResponse;
 import org.ahv.passwordprotectorback.exchange.response.element.ElementResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.BasicPasswordResponse;
@@ -28,7 +31,6 @@ public class ControllerAdapter {
     private final PasswordService passwordService;
     private final TypeService typeService;
     private final UserService userService;
-
 
     //Elements
     public BasicElementResponse convertToBasicElementResponse(Element element) {
@@ -163,5 +165,33 @@ public class ControllerAdapter {
         }
 
         return password;
+    }
+
+    public Type convertToType(TypeRequest typeRequest) {
+        Type type = null;
+
+        if (typeRequest != null) {
+            type = Type.builder()
+                    .name(typeRequest.getName())
+                    .build();
+        }
+
+        return type;
+    }
+
+    public User convertToUser(UserRequest userUpdateRequest) {
+        User user = null;
+
+        if (userUpdateRequest != null) {
+            user = User.builder()
+                    .firstName(userUpdateRequest.getFirstName())
+                    .lastName(userUpdateRequest.getLastName())
+                    .username(userUpdateRequest.getUsername())
+                    .email(userUpdateRequest.getEmail())
+                    .password(userUpdateRequest.getPassword())
+                    .build();
+        }
+
+        return user;
     }
 }

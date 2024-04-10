@@ -8,5 +8,6 @@ import lombok.Setter;
 @Setter
 @Builder
 public class TypeResponse {
+    private String id;
     private String name;
 }

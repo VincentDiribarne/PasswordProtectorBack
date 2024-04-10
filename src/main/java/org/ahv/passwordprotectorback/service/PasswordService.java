@@ -9,5 +9,5 @@ public interface PasswordService extends GlobalService<Password> {
 
     List<Password> findAllByElementId(String elementId);
 
-    List<String> findAllIdentifier();
+    List<String> findAllIdentifierByElementID(String elementId);
 }

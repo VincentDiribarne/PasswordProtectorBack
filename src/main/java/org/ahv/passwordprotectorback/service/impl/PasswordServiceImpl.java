@@ -20,8 +20,8 @@ public class PasswordServiceImpl implements PasswordService {
     }
 
     @Override
-    public List<String> findAllIdentifier() {
-        return findAll().stream().map(Password::getIdentifier).toList();
+    public List<String> findAllIdentifierByElementID(String elementID) {
+        return findAll().stream().filter(password -> password.getElementID().equals(elementID)).map(Password::getIdentifier).toList();
     }
 
     @Override
