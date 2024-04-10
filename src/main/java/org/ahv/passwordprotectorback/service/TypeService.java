@@ -9,7 +9,9 @@ public interface TypeService extends GlobalService<Type> {
 
     List<Type> findAllByName(String name);
 
-    List<Type> findAllByUserID(String userID);
+    List<Type> findAllByUserId(String userID);
+
+    List<Type> findAllByUserIDAndNull(String userID);
 
     List<String> findAllNamesByUserID(String userID);
 }

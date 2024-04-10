@@ -14,7 +14,5 @@ public class ElementUpdateRequest {
     private String url;
 
     private String description;
-
-    @NotBlank
     private String typeID;
 }

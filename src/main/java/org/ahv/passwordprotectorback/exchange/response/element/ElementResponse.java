@@ -1,12 +1,13 @@
 package org.ahv.passwordprotectorback.exchange.response.element;
 
-import org.ahv.passwordprotectorback.exchange.response.password.BasicPasswordResponse;
-import org.ahv.passwordprotectorback.exchange.response.type.TypeResponse;
-import org.ahv.passwordprotectorback.exchange.response.user.BasicUserResponse;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import org.ahv.passwordprotectorback.exchange.response.password.BasicPasswordResponse;
+import org.ahv.passwordprotectorback.exchange.response.type.BasicTypeResponse;
+import org.ahv.passwordprotectorback.exchange.response.user.BasicUserResponse;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -20,5 +21,7 @@ public class ElementResponse {
     private BasicUserResponse user;
     private List<BasicPasswordResponse> passwords;
     private int passwordCount;
-    private TypeResponse type;
+    private BasicTypeResponse type;
+    private LocalDate creationDate;
+    private LocalDate modificationDate;
 }

@@ -6,23 +6,23 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 public class GlobalController<T> {
-    public BasicResponse save(GlobalService<T> service, T element) {
-        if (element != null) {
-            service.save(element);
-            return BasicResponse.builder().message("Element saved").build();
+    public BasicResponse save(GlobalService<T> service, T object) {
+        if (object != null) {
+            service.save(object);
+            return BasicResponse.builder().message("Object saved").build();
         } else {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Element is null");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Object is null");
         }
     }
 
     public BasicResponse delete(GlobalService<T> service, String id) {
-        T element = service.findObjectByID(id);
+        T object = service.findObjectByID(id);
 
-        if (element != null) {
-            service.delete(element);
-            return BasicResponse.builder().message("Element deleted").build();
+        if (object != null) {
+            service.delete(object);
+            return BasicResponse.builder().message("Object deleted").build();
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Element not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Object not found");
         }
     }
 

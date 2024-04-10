@@ -6,10 +6,16 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class UserConnectRequest {
+public class UserUpdateRequest {
+    @NotBlank
+    private String firstName;
+
+    @NotBlank
+    private String lastName;
+
     @NotBlank
     private String username;
 
     @NotBlank
-    private String password;
+    private String email;
 }

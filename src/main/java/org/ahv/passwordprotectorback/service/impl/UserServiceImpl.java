@@ -24,6 +24,16 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByEmail(email);
     }
 
+    @Override
+    public List<String> findAllUsernames() {
+        return findAll().stream().map(User::getUsername).toList();
+    }
+
+    @Override
+    public List<String> findAllEmails() {
+        return findAll().stream().map(User::getEmail).toList();
+    }
+
 
     //Global method
     @Override

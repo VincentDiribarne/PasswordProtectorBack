@@ -9,6 +9,7 @@ import org.ahv.passwordprotectorback.exchange.response.BasicResponse;
 import org.ahv.passwordprotectorback.exchange.response.element.BasicElementResponse;
 import org.ahv.passwordprotectorback.exchange.response.element.ElementResponse;
 import org.ahv.passwordprotectorback.model.Element;
+import org.ahv.passwordprotectorback.model.User;
 import org.ahv.passwordprotectorback.service.ElementService;
 import org.ahv.passwordprotectorback.service.PasswordService;
 import org.ahv.passwordprotectorback.service.TypeService;
@@ -25,6 +26,9 @@ import java.util.List;
 @RequestMapping("/api")
 public class ElementController extends GlobalController<Element> {
     private final ElementService elementService;
+    private final UserService userService;
+    private final PasswordService passwordService;
+
     private final ControllerAdapter adapter;
     private final NameValidator nameValidator;
 
@@ -34,6 +38,8 @@ public class ElementController extends GlobalController<Element> {
                              UserService userService
     ) {
         this.elementService = elementService;
+        this.userService = userService;
+        this.passwordService = passwordService;
         this.adapter = new ControllerAdapter(elementService, passwordService, typeService, userService);
         this.nameValidator = NameValidator.getInstance();
     }
@@ -86,7 +92,15 @@ public class ElementController extends GlobalController<Element> {
     public BasicResponse saveElement(@Valid @RequestBody ElementRequest elementRequest) {
         verification(elementRequest, null, null);
 
-        return save(elementService, adapter.convertToElement(elementRequest));
+        User user = userService.findObjectByID(elementRequest.getUserID());
+        if (user != null) {
+            user.setElementCount(user.getElementCount() + 1);
+            userService.save(user);
+
+            return save(elementService, adapter.convertToElement(elementRequest));
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
     }
 
 
@@ -97,13 +111,15 @@ public class ElementController extends GlobalController<Element> {
     }
 
 
-    @DeleteMapping("/element/{id}")
+    @DeleteMapping("/element/user/{userId}/id/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public BasicResponse deleteElement(@PathVariable String id) {
-        try {
-            return delete(elementService, id);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting element", e);
+    public BasicResponse deleteElement(@PathVariable String userId, @PathVariable String id) {
+        User user = userService.findObjectByID(userId);
+
+        if (user != null) {
+            return delete(user, id);
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
     }
 
@@ -119,7 +135,7 @@ public class ElementController extends GlobalController<Element> {
             elementToUpdate.setUrl(getStringNotNull(elementToUpdate.getUrl(), elementRequest.getUrl()));
             elementToUpdate.setDescription(getStringNotNull(elementToUpdate.getDescription(), elementRequest.getDescription()));
             elementToUpdate.setTypeID(getStringNotNull(elementToUpdate.getTypeID(), elementRequest.getTypeID()));
-            
+
             elementToUpdate.setModificationDate(LocalDate.now());
             elementService.save(elementToUpdate);
 
@@ -127,6 +143,17 @@ public class ElementController extends GlobalController<Element> {
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Element not found");
         }
+    }
+
+    private BasicResponse delete(User user, String id) {
+        //User
+        user.setElementCount(user.getElementCount() - 1);
+        userService.save(user);
+
+        //Password
+        passwordService.findAllByElementId(id).forEach(passwordService::delete);
+
+        return delete(elementService, id);
     }
 
     private void verification(ElementUpdateRequest elementRequest, String oldName, String oldURL) {

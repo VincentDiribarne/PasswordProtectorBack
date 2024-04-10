@@ -1,7 +1,6 @@
 package org.ahv.passwordprotectorback.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.ahv.passwordprotectorback.model.Password;
 import org.ahv.passwordprotectorback.model.Type;
 import org.ahv.passwordprotectorback.repository.TypeRepository;
 import org.ahv.passwordprotectorback.service.TypeService;
@@ -26,13 +25,18 @@ public class TypeServiceImpl implements TypeService {
     }
 
     @Override
-    public List<Type> findAllByUserID(String userID) {
-        return typeRepository.findAllByUserIDAndUserIDIsNull(userID);
+    public List<Type> findAllByUserIDAndNull(String userID) {
+        return findAll().stream().filter(type -> type.getUserID() == null || userID.equals(type.getUserID())).toList();
+    }
+
+    @Override
+    public List<Type> findAllByUserId(String userID) {
+        return typeRepository.findAllByUserID(userID);
     }
 
     @Override
     public List<String> findAllNamesByUserID(String userID) {
-        return findAllByUserID(userID).stream().map(Type::getName).toList();
+        return findAllByUserIDAndNull(userID).stream().map(Type::getName).toList();
     }
 
 

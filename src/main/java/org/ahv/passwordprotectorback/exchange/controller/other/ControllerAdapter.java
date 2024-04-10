@@ -5,12 +5,12 @@ import org.ahv.passwordprotectorback.exchange.request.element.ElementRequest;
 import org.ahv.passwordprotectorback.exchange.request.password.PasswordRequest;
 import org.ahv.passwordprotectorback.exchange.request.type.TypeRequest;
 import org.ahv.passwordprotectorback.exchange.request.user.UserRequest;
-import org.ahv.passwordprotectorback.exchange.request.user.UserUpdateRequest;
 import org.ahv.passwordprotectorback.exchange.response.element.BasicElementResponse;
 import org.ahv.passwordprotectorback.exchange.response.element.ElementResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.BasicPasswordResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.OnlyPasswordResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.PasswordResponse;
+import org.ahv.passwordprotectorback.exchange.response.type.BasicTypeResponse;
 import org.ahv.passwordprotectorback.exchange.response.type.TypeResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.BasicUserResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.UserResponse;
@@ -49,33 +49,49 @@ public class ControllerAdapter {
     }
 
     public ElementResponse convertToElementResponse(Element element) {
-        return ElementResponse.builder()
-                .id(element.getId())
-                .name(element.getName())
-                .url(element.getUrl())
-                .passwordCount(element.getPasswordCount())
-                .passwords(
-                        passwordService.findAllByElementId(element.getId())
-                                .stream()
-                                .map(this::convertToBasicPasswordResponse).toList()
-                )
-                .type(
-                        convertToTypeResponse(typeService.findObjectByID(element.getTypeID()))
-                )
-                .user(
-                        convertToBasicUserResponse(userService.findObjectByID(element.getUserID()))
-                )
-                .build();
+        ElementResponse elementResponse = null;
+
+        if (element != null) {
+            elementResponse = ElementResponse.builder()
+                    .id(element.getId())
+                    .name(element.getName())
+                    .url(element.getUrl())
+                    .description(element.getDescription())
+                    .passwordCount(element.getPasswordCount())
+                    .passwords(
+                            passwordService.findAllByElementId(element.getId())
+                                    .stream()
+                                    .map(this::convertToBasicPasswordResponse).toList()
+                    )
+                    .type(
+                            element.getTypeID() == null ? null :
+                                    convertToBasicTypeResponse(typeService.findObjectByID(element.getTypeID()))
+                    )
+                    .user(
+                            convertToBasicUserResponse(userService.findObjectByID(element.getUserID()))
+                    )
+                    .creationDate(element.getCreationDate())
+                    .modificationDate(element.getModificationDate())
+                    .build();
+        }
+
+        return elementResponse;
     }
 
 
     //Passwords
     public BasicPasswordResponse convertToBasicPasswordResponse(Password password) {
-        return BasicPasswordResponse.builder()
-                .id(password.getId())
-                .identifier(password.getIdentifier())
-                .comment(password.getComment())
-                .build();
+        BasicPasswordResponse passwordResponse = null;
+
+        if (password != null) {
+            passwordResponse = BasicPasswordResponse.builder()
+                    .id(password.getId())
+                    .identifier(password.getIdentifier())
+                    .comment(password.getComment())
+                    .build();
+        }
+
+        return passwordResponse;
     }
 
     public OnlyPasswordResponse convertToOnlyPasswordResponse(String decryptPassword) {
@@ -85,49 +101,96 @@ public class ControllerAdapter {
     }
 
     public PasswordResponse convertToPasswordResponse(Password password) {
-        return PasswordResponse.builder()
-                .id(password.getId())
-                .identifier(password.getIdentifier())
-                .comment(password.getComment())
-                .element(
-                        convertToBasicElementResponse(elementService.findObjectByID(password.getElementID()))
-                )
-                .build();
+        PasswordResponse passwordResponse = null;
+
+        if (password != null) {
+            passwordResponse = PasswordResponse.builder()
+                    .id(password.getId())
+                    .identifier(password.getIdentifier())
+                    .comment(password.getComment())
+                    .element(
+                            convertToBasicElementResponse(elementService.findObjectByID(password.getElementID()))
+                    )
+                    .creationDate(password.getCreationDate())
+                    .modificationDate(password.getModificationDate())
+                    .build();
+        }
+
+        return passwordResponse;
     }
 
 
     //Type
+    public BasicTypeResponse convertToBasicTypeResponse(Type type) {
+        BasicTypeResponse typeResponse = null;
+
+        if (type != null) {
+            typeResponse = BasicTypeResponse.builder()
+                    .id(type.getId())
+                    .name(type.getName())
+                    .build();
+        }
+
+        return typeResponse;
+    }
+
     public TypeResponse convertToTypeResponse(Type type) {
-        return TypeResponse.builder()
-                .id(type.getId())
-                .name(type.getName())
-                .build();
+        TypeResponse typeResponse = null;
+
+        if (type != null) {
+            typeResponse = TypeResponse.builder()
+                    .id(type.getId())
+                    .name(type.getName())
+                    .user(
+                            type.getUserID() == null ? null :
+                            convertToBasicUserResponse(userService.findObjectByID(type.getUserID()))
+                    )
+                    .creationDate(type.getCreationDate())
+                    .modificationDate(type.getModificationDate())
+                    .build();
+        }
+
+        return typeResponse;
     }
 
 
     //User
     public BasicUserResponse convertToBasicUserResponse(User user) {
-        return BasicUserResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .elementCount(user.getElementCount())
-                .build();
+        BasicUserResponse userResponse = null;
+
+        if (user != null) {
+            userResponse = BasicUserResponse.builder()
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .elementCount(user.getElementCount())
+                    .build();
+        }
+
+        return userResponse;
     }
 
     public UserResponse convertToUserResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .elements(
-                        elementService.findAllByUserID(user.getId())
-                                .stream()
-                                .map(this::convertToBasicElementResponse).toList()
-                )
-                .elementCount(user.getElementCount())
-                .build();
+        UserResponse userResponse = null;
+
+        if (user != null) {
+            userResponse = UserResponse.builder()
+                    .id(user.getId())
+                    .firstName(user.getFirstName())
+                    .lastName(user.getLastName())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .elements(
+                            elementService.findAllByUserID(user.getId())
+                                    .stream()
+                                    .map(this::convertToBasicElementResponse).toList()
+                    )
+                    .elementCount(user.getElementCount())
+                    .creationDate(user.getCreationDate())
+                    .modificationDate(user.getModificationDate())
+                    .build();
+        }
+
+        return userResponse;
     }
 
 
@@ -142,6 +205,7 @@ public class ControllerAdapter {
                     .description(elementRequest.getDescription())
                     .typeID(elementRequest.getTypeID())
                     .userID(elementRequest.getUserID())
+                    .passwordCount(0)
                     .build();
 
             element.setCreationDate(LocalDate.now());
@@ -173,7 +237,10 @@ public class ControllerAdapter {
         if (typeRequest != null) {
             type = Type.builder()
                     .name(typeRequest.getName())
+                    .userID(typeRequest.getUserID())
                     .build();
+
+            type.setCreationDate(LocalDate.now());
         }
 
         return type;
@@ -189,7 +256,10 @@ public class ControllerAdapter {
                     .username(userUpdateRequest.getUsername())
                     .email(userUpdateRequest.getEmail())
                     .password(userUpdateRequest.getPassword())
+                    .elementCount(0)
                     .build();
+
+            user.setCreationDate(LocalDate.now());
         }
 
         return user;

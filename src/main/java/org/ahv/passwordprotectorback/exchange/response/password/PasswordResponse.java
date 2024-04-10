@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ahv.passwordprotectorback.exchange.response.element.BasicElementResponse;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @Builder
@@ -13,4 +15,6 @@ public class PasswordResponse {
     private String identifier;
     private String comment;
     private BasicElementResponse element;
+    private LocalDate creationDate;
+    private LocalDate modificationDate;
 }

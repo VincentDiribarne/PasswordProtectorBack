@@ -5,8 +5,10 @@ import org.ahv.passwordprotectorback.exchange.controller.other.ControllerAdapter
 import org.ahv.passwordprotectorback.exchange.controller.other.GlobalController;
 import org.ahv.passwordprotectorback.exchange.request.type.TypeRequest;
 import org.ahv.passwordprotectorback.exchange.response.BasicResponse;
+import org.ahv.passwordprotectorback.exchange.response.type.BasicTypeResponse;
 import org.ahv.passwordprotectorback.exchange.response.type.TypeResponse;
 import org.ahv.passwordprotectorback.model.Type;
+import org.ahv.passwordprotectorback.model.User;
 import org.ahv.passwordprotectorback.service.ElementService;
 import org.ahv.passwordprotectorback.service.PasswordService;
 import org.ahv.passwordprotectorback.service.TypeService;
@@ -16,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -39,22 +42,22 @@ public class TypeController extends GlobalController<Type> {
 
     @GetMapping("/types")
     @ResponseStatus(HttpStatus.OK)
-    public List<TypeResponse> getTypes() {
-        return typeService.findAll().stream().map(adapter::convertToTypeResponse).toList();
+    public List<BasicTypeResponse> getTypes() {
+        return typeService.findAll().stream().map(adapter::convertToBasicTypeResponse).toList();
     }
 
 
     @GetMapping("/types/name/{name}")
     @ResponseStatus(HttpStatus.OK)
-    public List<TypeResponse> getTypesByName(@PathVariable String name) {
-        return typeService.findAllByName(name).stream().map(adapter::convertToTypeResponse).toList();
+    public List<BasicTypeResponse> getTypesByName(@PathVariable String name) {
+        return typeService.findAllByName(name).stream().map(adapter::convertToBasicTypeResponse).toList();
     }
 
 
     @GetMapping("/types/user/{userID}")
     @ResponseStatus(HttpStatus.OK)
-    public List<TypeResponse> getTypesByUserID(@PathVariable String userID) {
-        return typeService.findAllByUserID(userID).stream().map(adapter::convertToTypeResponse).toList();
+    public List<BasicTypeResponse> getTypesByUserID(@PathVariable String userID) {
+        return typeService.findAllByUserIDAndNull(userID).stream().map(adapter::convertToBasicTypeResponse).toList();
     }
 
 
@@ -77,7 +80,8 @@ public class TypeController extends GlobalController<Type> {
     public BasicResponse saveType(@Valid @RequestBody TypeRequest typeRequest) {
         verification(typeRequest, null);
 
-        if (userService.findObjectByID(typeRequest.getUserID()) != null) {
+        User user = userService.findObjectByID(typeRequest.getUserID());
+        if (user != null) {
             return save(typeService, adapter.convertToType(typeRequest));
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
@@ -94,12 +98,19 @@ public class TypeController extends GlobalController<Type> {
             verification(typeRequest, typeToUpdate.getName());
 
             typeToUpdate.setName(getStringNotNull(typeToUpdate.getName(), typeRequest.getName()));
+            typeToUpdate.setModificationDate(LocalDate.now());
             typeService.save(typeToUpdate);
 
             return BasicResponse.builder().message("Type updated").build();
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Type not found");
         }
+    }
+
+    @DeleteMapping("/type/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public BasicResponse deleteType(@PathVariable String id) {
+        return delete(typeService, id);
     }
 
 

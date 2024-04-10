@@ -82,9 +82,11 @@ public class PasswordController extends GlobalController<Password> {
         if (element != null) {
             element.setPasswordCount(element.getPasswordCount() + 1);
             elementService.save(element);
-        }
 
-        return save(passwordService, adapter.convertToPassword(passwordRequest));
+            return save(passwordService, adapter.convertToPassword(passwordRequest));
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Element not found");
+        }
     }
 
 
@@ -95,13 +97,24 @@ public class PasswordController extends GlobalController<Password> {
     }
 
 
-    @DeleteMapping("/password/{id}")
+    @DeleteMapping("/password/elementId/{elementId}/id/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public BasicResponse deletePassword(@PathVariable String id) {
-        try {
+    public BasicResponse deletePassword(@PathVariable String elementId, @PathVariable String id) {
+        Element element = elementService.findObjectByID(elementId);
+
+        if (element != null) {
+            int newPasswordCount = element.getPasswordCount() - 1;
+
+            if (newPasswordCount == 0) {
+                elementService.delete(element);
+            } else {
+                element.setPasswordCount(newPasswordCount);
+                elementService.save(element);
+            }
+
             return delete(passwordService, id);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error deleting password");
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Element not found");
         }
     }
 
