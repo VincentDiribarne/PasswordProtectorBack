@@ -144,7 +144,7 @@ public class ControllerAdapter {
                     .name(type.getName())
                     .user(
                             type.getUserID() == null ? null :
-                            convertToBasicUserResponse(userService.findObjectByID(type.getUserID()))
+                                    convertToBasicUserResponse(userService.findObjectByID(type.getUserID()))
                     )
                     .creationDate(type.getCreationDate())
                     .modificationDate(type.getModificationDate())
@@ -174,7 +174,6 @@ public class ControllerAdapter {
 
         if (user != null) {
             userResponse = UserResponse.builder()
-                    .id(user.getId())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
                     .username(user.getUsername())
@@ -199,16 +198,21 @@ public class ControllerAdapter {
         Element element = null;
 
         if (elementRequest != null) {
-            element = Element.builder()
-                    .name(elementRequest.getName())
-                    .url(elementRequest.getUrl())
-                    .description(elementRequest.getDescription())
-                    .typeID(elementRequest.getTypeID())
-                    .userID(elementRequest.getUserID())
-                    .passwordCount(0)
-                    .build();
+            User user = userService.findByUsername(elementRequest.getUsername());
 
-            element.setCreationDate(LocalDate.now());
+            if (user != null) {
+                element = Element.builder()
+                        .name(elementRequest.getName())
+                        .url(elementRequest.getUrl())
+                        .description(elementRequest.getDescription())
+                        .typeID(elementRequest.getTypeID())
+                        .userID(user.getId())
+                        .passwordCount(0)
+                        .build();
+
+                element.setCreationDate(LocalDate.now());
+
+            }
         }
 
         return element;
@@ -235,12 +239,16 @@ public class ControllerAdapter {
         Type type = null;
 
         if (typeRequest != null) {
-            type = Type.builder()
-                    .name(typeRequest.getName())
-                    .userID(typeRequest.getUserID())
-                    .build();
+            User user = userService.findByUsername(typeRequest.getUsername());
 
-            type.setCreationDate(LocalDate.now());
+            if(user != null) {
+                type = Type.builder()
+                        .name(typeRequest.getName())
+                        .userID(user.getId())
+                        .build();
+
+                type.setCreationDate(LocalDate.now());
+            }
         }
 
         return type;
