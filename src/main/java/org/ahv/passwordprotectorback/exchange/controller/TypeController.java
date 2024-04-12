@@ -80,7 +80,7 @@ public class TypeController extends GlobalController<Type> {
     public BasicResponse saveType(@Valid @RequestBody TypeRequest typeRequest) {
         verification(typeRequest, null);
 
-        User user = userService.findObjectByID(typeRequest.getUserID());
+        User user = userService.findByUsername(typeRequest.getUsername());
         if (user != null) {
             return save(typeService, adapter.convertToType(typeRequest));
         } else {
@@ -115,7 +115,9 @@ public class TypeController extends GlobalController<Type> {
 
 
     private void verification(TypeRequest typeRequest, String oldName) {
-        if (nameValidator.isNotValid(typeService.findAllNamesByUserID(typeRequest.getUserID()), oldName, typeRequest.getName())) {
+        User user = userService.findByUsername(typeRequest.getUsername());
+
+        if (nameValidator.isNotValid(typeService.findAllNamesByUserID(user.getId()), oldName, typeRequest.getName())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This name is already used");
         }
     }

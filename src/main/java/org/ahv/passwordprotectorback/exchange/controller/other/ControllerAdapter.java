@@ -22,6 +22,7 @@ import org.ahv.passwordprotectorback.service.ElementService;
 import org.ahv.passwordprotectorback.service.PasswordService;
 import org.ahv.passwordprotectorback.service.TypeService;
 import org.ahv.passwordprotectorback.service.UserService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDate;
 
@@ -160,7 +161,6 @@ public class ControllerAdapter {
 
         if (user != null) {
             userResponse = BasicUserResponse.builder()
-                    .id(user.getId())
                     .username(user.getUsername())
                     .elementCount(user.getElementCount())
                     .build();
@@ -246,16 +246,17 @@ public class ControllerAdapter {
         return type;
     }
 
-    public User convertToUser(UserRequest userUpdateRequest) {
+    public User convertToUser(UserRequest userRequest) {
         User user = null;
+        BCryptPasswordEncoder bCrypt = new BCryptPasswordEncoder();
 
-        if (userUpdateRequest != null) {
+        if (userRequest != null) {
             user = User.builder()
-                    .firstName(userUpdateRequest.getFirstName())
-                    .lastName(userUpdateRequest.getLastName())
-                    .username(userUpdateRequest.getUsername())
-                    .email(userUpdateRequest.getEmail())
-                    .password(userUpdateRequest.getPassword())
+                    .firstName(userRequest.getFirstName())
+                    .lastName(userRequest.getLastName())
+                    .username(userRequest.getUsername())
+                    .email(userRequest.getEmail())
+                    .password(bCrypt.encode(userRequest.getPassword()))
                     .elementCount(0)
                     .build();
 

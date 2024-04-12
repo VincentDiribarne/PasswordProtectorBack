@@ -11,5 +11,5 @@ public class TypeRequest {
     private String name;
 
     @NotBlank
-    private String userID;
+    private String username;
 }

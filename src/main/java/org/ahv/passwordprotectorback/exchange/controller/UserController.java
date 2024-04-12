@@ -1,47 +1,56 @@
 package org.ahv.passwordprotectorback.exchange.controller;
 
+import io.jsonwebtoken.Claims;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.ahv.passwordprotectorback.exchange.controller.other.ControllerAdapter;
 import org.ahv.passwordprotectorback.exchange.controller.other.GlobalController;
-import org.ahv.passwordprotectorback.exchange.request.user.UpdatePasswordRequest;
-import org.ahv.passwordprotectorback.exchange.request.user.UserConnectRequest;
-import org.ahv.passwordprotectorback.exchange.request.user.UserRequest;
-import org.ahv.passwordprotectorback.exchange.request.user.UserUpdateRequest;
+import org.ahv.passwordprotectorback.exchange.request.user.*;
 import org.ahv.passwordprotectorback.exchange.response.BasicResponse;
+import org.ahv.passwordprotectorback.exchange.response.password.TokenResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.BasicUserResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.UserResponse;
+import org.ahv.passwordprotectorback.model.Token;
 import org.ahv.passwordprotectorback.model.User;
+import org.ahv.passwordprotectorback.repository.TokenRepository;
+import org.ahv.passwordprotectorback.security.JWTService;
 import org.ahv.passwordprotectorback.service.ElementService;
 import org.ahv.passwordprotectorback.service.PasswordService;
 import org.ahv.passwordprotectorback.service.TypeService;
 import org.ahv.passwordprotectorback.service.UserService;
 import org.ahv.passwordprotectorback.validator.NameValidator;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@RequiredArgsConstructor
 public class UserController extends GlobalController<User> {
     private final UserService userService;
     private final ElementService elementService;
     private final PasswordService passwordService;
     private final TypeService typeService;
-    private final ControllerAdapter adapter;
-    private final NameValidator nameValidator;
+    private final JWTService jwtService;
+    private final TokenRepository tokenRepository;
+    private final AuthenticationManager authenticationManager;
 
-    public UserController(ElementService elementService,
-                          PasswordService passwordService,
-                          TypeService typeService,
-                          UserService userService
-    ) {
-        this.userService = userService;
-        this.elementService = elementService;
-        this.passwordService = passwordService;
-        this.typeService = typeService;
+    private ControllerAdapter adapter;
+    private NameValidator nameValidator;
+
+    @PostConstruct
+    public void init() {
         this.adapter = new ControllerAdapter(elementService, passwordService, typeService, userService);
         this.nameValidator = NameValidator.getInstance();
     }
@@ -68,24 +77,105 @@ public class UserController extends GlobalController<User> {
 
     @GetMapping("/user/email/{email}")
     @ResponseStatus(HttpStatus.OK)
+    @RolesAllowed("ADMIN")
     public UserResponse getUserByEmail(@PathVariable String email) {
         return adapter.convertToUserResponse(userService.findByEmail(email));
     }
 
+
     @PostMapping("/user/login")
     @ResponseStatus(HttpStatus.OK)
-    public BasicUserResponse login(@Valid @RequestBody UserConnectRequest userRequest) {
-        User user = userService.findByUsername(userRequest.getUsername());
+    public TokenResponse login(@Valid @RequestBody UserConnectRequest userRequest) {
+        Authentication authentication = this.authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(userRequest.getUsername(), userRequest.getPassword())
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        //TODO : Revoir ça avec la mise en place de la sécurité
-        if (user != null && user.getPassword().equals(userRequest.getPassword())) {
-            return adapter.convertToBasicUserResponse(user);
-        } else {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found");
-        }
+        String token = jwtService.generateToken(userRequest.getUsername());
+        String refreshToken = jwtService.generateRefreshToken(userRequest.getUsername());
+
+        saveToken(userRequest.getUsername(), refreshToken);
+
+        return TokenResponse.builder()
+                .token(token)
+                .refreshToken(refreshToken)
+                .build();
     }
 
-    @PostMapping("/user")
+    private void saveToken(String username, String refreshToken) {
+        User user = userService.findByUsername(username);
+
+        Date expirationDate = jwtService.extractClaim(refreshToken, true, Claims::getExpiration);
+        LocalDate expirationLocalDate = expirationDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+
+        Token saveToken = Token.builder()
+                .token(refreshToken)
+                .userID(user.getId())
+                .expirationDate(expirationLocalDate)
+                .build();
+
+        tokenRepository.save(saveToken);
+    }
+
+    @PostMapping("/user/refreshToken")
+    @ResponseStatus(HttpStatus.OK)
+    public TokenResponse refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        if (refreshTokenRequest.getId() == null || refreshTokenRequest.getToken() == null || refreshTokenRequest.getRefreshToken() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
+        }
+
+        User user = userService.findObjectByID(refreshTokenRequest.getId());
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
+        }
+
+        List<Token> tokens = tokenRepository.findAllByUserID(user.getId());
+        List<Token> validTokens = tokens.stream()
+                .filter(t -> t.getToken().equals(refreshTokenRequest.getRefreshToken()))
+                .toList();
+
+        if (validTokens.isEmpty()) {
+            //TODO: Ban user ?
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
+        }
+
+        Token refreshToken = validTokens.getFirst();
+        if (refreshToken.isAlreadyUsed()) {
+            //TODO: Ban user ?
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
+        }
+
+        if (refreshToken.getExpirationDate().isBefore(LocalDate.now())) {
+            //TODO: Ban user ?
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
+        }
+
+        String username = jwtService.extractClaim(refreshTokenRequest.getRefreshToken(), true, Claims::getSubject);
+        if (!username.equals(user.getUsername())) {
+            //TODO : Ban user ?
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
+        }
+
+        return saveAndGenerateNewToken(refreshToken, username);
+    }
+
+    private TokenResponse saveAndGenerateNewToken(Token token, String username) {
+        token.setAlreadyUsed(true);
+        tokenRepository.save(token);
+
+        String newToken = jwtService.generateToken(username);
+        String refreshToken = jwtService.generateRefreshToken(username);
+
+        saveToken(username, refreshToken);
+
+        return TokenResponse.builder()
+                .token(newToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+
+    @PostMapping("/user/createAccount")
     @ResponseStatus(HttpStatus.CREATED)
     public BasicResponse saveUser(@Valid @RequestBody UserRequest userRequest) {
         verification(userRequest, null, null);

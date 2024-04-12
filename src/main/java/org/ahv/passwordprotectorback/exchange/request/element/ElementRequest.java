@@ -8,5 +8,5 @@ import lombok.Setter;
 @Setter
 public class ElementRequest extends ElementUpdateRequest {
     @NotBlank
-    private String userID;
+    private String username;
 }
