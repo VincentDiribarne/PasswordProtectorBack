@@ -22,9 +22,16 @@ public class SecurityConfig {
                         "/api/user/login",
                         "/api/user/createAccount",
                         "/api/user/forgotPassword",
-                        "/api/user/refreshToken"
+                        "/api/user/refreshToken",
+                        "/swagger-ui/**",
+                        "/v3/api-docs/**",
+                        "/configuration/ui",
+                        "/swagger-resources/**",
+                        "/configuration/security",
+                        "/swagger-ui.html",
+                        "/webjars/**"
                 ).permitAll()
-                .requestMatchers("/**").authenticated()
+                .anyRequest().authenticated()
         );
 
         http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
