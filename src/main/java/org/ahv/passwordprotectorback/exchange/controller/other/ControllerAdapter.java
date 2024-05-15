@@ -22,6 +22,7 @@ import org.ahv.passwordprotectorback.service.ElementService;
 import org.ahv.passwordprotectorback.service.PasswordService;
 import org.ahv.passwordprotectorback.service.TypeService;
 import org.ahv.passwordprotectorback.service.UserService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDate;
 
@@ -143,7 +144,7 @@ public class ControllerAdapter {
                     .name(type.getName())
                     .user(
                             type.getUserID() == null ? null :
-                            convertToBasicUserResponse(userService.findObjectByID(type.getUserID()))
+                                    convertToBasicUserResponse(userService.findObjectByID(type.getUserID()))
                     )
                     .creationDate(type.getCreationDate())
                     .modificationDate(type.getModificationDate())
@@ -160,7 +161,6 @@ public class ControllerAdapter {
 
         if (user != null) {
             userResponse = BasicUserResponse.builder()
-                    .id(user.getId())
                     .username(user.getUsername())
                     .elementCount(user.getElementCount())
                     .build();
@@ -174,7 +174,6 @@ public class ControllerAdapter {
 
         if (user != null) {
             userResponse = UserResponse.builder()
-                    .id(user.getId())
                     .firstName(user.getFirstName())
                     .lastName(user.getLastName())
                     .username(user.getUsername())
@@ -199,16 +198,21 @@ public class ControllerAdapter {
         Element element = null;
 
         if (elementRequest != null) {
-            element = Element.builder()
-                    .name(elementRequest.getName())
-                    .url(elementRequest.getUrl())
-                    .description(elementRequest.getDescription())
-                    .typeID(elementRequest.getTypeID())
-                    .userID(elementRequest.getUserID())
-                    .passwordCount(0)
-                    .build();
+            User user = userService.findByUsername(elementRequest.getUsername());
 
-            element.setCreationDate(LocalDate.now());
+            if (user != null) {
+                element = Element.builder()
+                        .name(elementRequest.getName())
+                        .url(elementRequest.getUrl())
+                        .description(elementRequest.getDescription())
+                        .typeID(elementRequest.getTypeID())
+                        .userID(user.getId())
+                        .passwordCount(0)
+                        .build();
+
+                element.setCreationDate(LocalDate.now());
+
+            }
         }
 
         return element;
@@ -235,27 +239,32 @@ public class ControllerAdapter {
         Type type = null;
 
         if (typeRequest != null) {
-            type = Type.builder()
-                    .name(typeRequest.getName())
-                    .userID(typeRequest.getUserID())
-                    .build();
+            User user = userService.findByUsername(typeRequest.getUsername());
 
-            type.setCreationDate(LocalDate.now());
+            if(user != null) {
+                type = Type.builder()
+                        .name(typeRequest.getName())
+                        .userID(user.getId())
+                        .build();
+
+                type.setCreationDate(LocalDate.now());
+            }
         }
 
         return type;
     }
 
-    public User convertToUser(UserRequest userUpdateRequest) {
+    public User convertToUser(UserRequest userRequest) {
         User user = null;
+        BCryptPasswordEncoder bCrypt = new BCryptPasswordEncoder();
 
-        if (userUpdateRequest != null) {
+        if (userRequest != null) {
             user = User.builder()
-                    .firstName(userUpdateRequest.getFirstName())
-                    .lastName(userUpdateRequest.getLastName())
-                    .username(userUpdateRequest.getUsername())
-                    .email(userUpdateRequest.getEmail())
-                    .password(userUpdateRequest.getPassword())
+                    .firstName(userRequest.getFirstName())
+                    .lastName(userRequest.getLastName())
+                    .username(userRequest.getUsername())
+                    .email(userRequest.getEmail())
+                    .password(bCrypt.encode(userRequest.getPassword()))
                     .elementCount(0)
                     .build();
 

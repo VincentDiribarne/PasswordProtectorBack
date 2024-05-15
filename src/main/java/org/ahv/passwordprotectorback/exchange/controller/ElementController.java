@@ -92,7 +92,7 @@ public class ElementController extends GlobalController<Element> {
     public BasicResponse saveElement(@Valid @RequestBody ElementRequest elementRequest) {
         verification(elementRequest, null, null);
 
-        User user = userService.findObjectByID(elementRequest.getUserID());
+        User user = userService.findByUsername(elementRequest.getUsername());
         if (user != null) {
             user.setElementCount(user.getElementCount() + 1);
             userService.save(user);
