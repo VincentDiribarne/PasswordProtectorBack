@@ -1,6 +1,8 @@
 package org.ahv.passwordprotectorback.exchange.controller;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.ahv.passwordprotectorback.exchange.controller.other.ControllerAdapter;
 import org.ahv.passwordprotectorback.exchange.controller.other.GlobalController;
 import org.ahv.passwordprotectorback.exchange.request.password.PasswordRequest;
@@ -25,19 +27,18 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/")
+@RequiredArgsConstructor
 public class PasswordController extends GlobalController<Password> {
-    private final PasswordService passwordService;
+    private final UserService userService;
     private final ElementService elementService;
-    private final ControllerAdapter adapter;
-    private final NameValidator nameValidator;
+    private final PasswordService passwordService;
+    private final TypeService typeService;
 
-    public PasswordController(ElementService elementService,
-                              PasswordService passwordService,
-                              TypeService typeService,
-                              UserService userService
-    ) {
-        this.passwordService = passwordService;
-        this.elementService = elementService;
+    private ControllerAdapter adapter;
+    private NameValidator nameValidator;
+
+    @PostConstruct
+    public void init() {
         this.adapter = new ControllerAdapter(elementService, passwordService, typeService, userService);
         this.nameValidator = NameValidator.getInstance();
     }
