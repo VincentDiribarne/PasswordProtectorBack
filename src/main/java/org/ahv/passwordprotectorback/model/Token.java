@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDate;
+import java.util.Date;
 
 @Getter
 @Setter
@@ -14,6 +14,7 @@ import java.time.LocalDate;
 public class Token {
     private String userID;
     private String token;
-    private LocalDate expirationDate;
+    private TokenType type;
+    private Date expirationDate;
     private boolean alreadyUsed;
 }

@@ -17,5 +17,5 @@ public class User extends PersistentEntity {
     private String email;
     private String password;
     private int elementCount;
-    private boolean locked;
+    private Boolean locked;
 }

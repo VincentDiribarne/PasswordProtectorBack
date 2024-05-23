@@ -3,25 +3,29 @@ package org.ahv.passwordprotectorback.exchange.controller;
 import io.jsonwebtoken.Claims;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ahv.passwordprotectorback.exchange.controller.other.ControllerAdapter;
 import org.ahv.passwordprotectorback.exchange.controller.other.GlobalController;
-import org.ahv.passwordprotectorback.exchange.request.user.*;
+import org.ahv.passwordprotectorback.exchange.request.user.UpdatePasswordRequest;
+import org.ahv.passwordprotectorback.exchange.request.user.UserConnectRequest;
+import org.ahv.passwordprotectorback.exchange.request.user.UserRequest;
+import org.ahv.passwordprotectorback.exchange.request.user.UserUpdateRequest;
 import org.ahv.passwordprotectorback.exchange.response.BasicResponse;
-import org.ahv.passwordprotectorback.exchange.response.password.TokenResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.BasicUserResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.UserResponse;
 import org.ahv.passwordprotectorback.model.Token;
+import org.ahv.passwordprotectorback.model.TokenType;
 import org.ahv.passwordprotectorback.model.User;
-import org.ahv.passwordprotectorback.repository.TokenRepository;
+import org.ahv.passwordprotectorback.security.AESUtil;
 import org.ahv.passwordprotectorback.security.JWTService;
-import org.ahv.passwordprotectorback.service.ElementService;
-import org.ahv.passwordprotectorback.service.PasswordService;
-import org.ahv.passwordprotectorback.service.TypeService;
-import org.ahv.passwordprotectorback.service.UserService;
+import org.ahv.passwordprotectorback.service.*;
 import org.ahv.passwordprotectorback.validator.NameValidator;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -30,7 +34,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -43,18 +47,20 @@ public class UserController extends GlobalController<User> {
     private final PasswordService passwordService;
     private final TypeService typeService;
     private final JWTService jwtService;
-    private final TokenRepository tokenRepository;
+    private final TokenService tokenService;
     private final AuthenticationManager authenticationManager;
+    private final AESUtil aesUtil;
 
     private ControllerAdapter adapter;
     private NameValidator nameValidator;
+
+    private String refreshToken = null;
 
     @PostConstruct
     public void init() {
         this.adapter = new ControllerAdapter(elementService, passwordService, typeService, userService);
         this.nameValidator = NameValidator.getInstance();
     }
-
 
     @GetMapping("/users")
     @ResponseStatus(HttpStatus.OK)
@@ -82,56 +88,51 @@ public class UserController extends GlobalController<User> {
         return adapter.convertToUserResponse(userService.findByEmail(email));
     }
 
-
     @PostMapping("/user/login")
     @ResponseStatus(HttpStatus.OK)
-    public TokenResponse login(@Valid @RequestBody UserConnectRequest userRequest) {
+    public ResponseEntity<String> login(@Valid @RequestBody UserConnectRequest userRequest) {
         Authentication authentication = this.authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(userRequest.getUsername(), userRequest.getPassword())
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        String token = jwtService.generateToken(userRequest.getUsername());
-        String refreshToken = jwtService.generateRefreshToken(userRequest.getUsername());
+        User user = userService.findByUsername(userRequest.getUsername());
 
-        saveToken(userRequest.getUsername(), refreshToken);
-
-        return TokenResponse.builder()
-                .token(token)
-                .refreshToken(refreshToken)
-                .build();
-    }
-
-    private void saveToken(String username, String refreshToken) {
-        User user = userService.findByUsername(username);
-
-        Date expirationDate = jwtService.extractClaim(refreshToken, true, Claims::getExpiration);
-        LocalDate expirationLocalDate = expirationDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-
-        Token saveToken = Token.builder()
-                .token(refreshToken)
-                .userID(user.getId())
-                .expirationDate(expirationLocalDate)
-                .build();
-
-        tokenRepository.save(saveToken);
+        return generateNewTokens(user, true);
     }
 
     @PostMapping("/user/refreshToken")
     @ResponseStatus(HttpStatus.OK)
-    public TokenResponse refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
-        if (refreshTokenRequest.getId() == null || refreshTokenRequest.getToken() == null || refreshTokenRequest.getRefreshToken() == null) {
+    public ResponseEntity<String> refreshToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        String userID = null;
+
+        if (cookies != null) {
+            refreshToken = Arrays.stream(cookies)
+                    .filter(cookie -> cookie.getName().equals("refreshToken"))
+                    .findFirst()
+                    .map(Cookie::getValue)
+                    .orElse(null);
+
+            userID = Arrays.stream(cookies)
+                    .filter(cookie -> cookie.getName().equals("userID"))
+                    .findFirst()
+                    .map(cookie -> aesUtil.decrypt(cookie.getValue()))
+                    .orElse(null);
+        }
+
+        if (refreshToken == null || userID == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
         }
 
-        User user = userService.findObjectByID(refreshTokenRequest.getId());
+        User user = userService.findObjectByID(userID);
         if (user == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
         }
 
-        List<Token> tokens = tokenRepository.findAllByUserID(user.getId());
+        List<Token> tokens = tokenService.findAllByUserID(user.getId());
         List<Token> validTokens = tokens.stream()
-                .filter(t -> t.getToken().equals(refreshTokenRequest.getRefreshToken()))
+                .filter(t -> t.getToken().equals(refreshToken))
                 .toList();
 
         if (validTokens.isEmpty()) {
@@ -139,39 +140,73 @@ public class UserController extends GlobalController<User> {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
         }
 
-        Token refreshToken = validTokens.getFirst();
-        if (refreshToken.isAlreadyUsed()) {
+        Token refreshTokenRequest = validTokens.getFirst();
+        if (refreshTokenRequest.isAlreadyUsed()) {
             //TODO: Ban user ?
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
         }
 
-        if (refreshToken.getExpirationDate().isBefore(LocalDate.now())) {
+        if (refreshTokenRequest.getExpirationDate().before(new Date())) {
             //TODO: Ban user ?
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
         }
 
-        String username = jwtService.extractClaim(refreshTokenRequest.getRefreshToken(), true, Claims::getSubject);
+        String username = jwtService.extractClaim(refreshToken, true, Claims::getSubject);
         if (!username.equals(user.getUsername())) {
             //TODO : Ban user ?
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
         }
 
-        return saveAndGenerateNewToken(refreshToken, username);
+        return generateNewTokens(user, false);
     }
 
-    private TokenResponse saveAndGenerateNewToken(Token token, String username) {
-        token.setAlreadyUsed(true);
-        tokenRepository.save(token);
-
-        String newToken = jwtService.generateToken(username);
-        String refreshToken = jwtService.generateRefreshToken(username);
-
-        saveToken(username, refreshToken);
-
-        return TokenResponse.builder()
-                .token(newToken)
-                .refreshToken(refreshToken)
+    private ResponseCookie createCookie(String name, String value, int maxAge) {
+        return ResponseCookie.from(name, value)
+                .maxAge(maxAge)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path(name.equals("token") ? "/" : "/api/user/refreshToken")
                 .build();
+    }
+
+    private ResponseEntity<String> generateNewTokens(User user, boolean userCookie) {
+        tokenService.findAllByUserID(user.getId())
+                .stream()
+                .filter(t -> !t.isAlreadyUsed())
+                .forEach(tokenService::delete);
+
+        String token = jwtService.generateToken(user.getUsername());
+        String refreshToken = jwtService.generateRefreshToken(user.getUsername());
+
+        saveToken(user.getId(), token, TokenType.TOKEN);
+        saveToken(user.getId(), refreshToken, TokenType.REFRESH_TOKEN);
+
+        String[] headers = new String[userCookie ? 3 : 2];
+
+        headers[0] = createCookie("token", token, jwtService.TOKEN_EXPIRATION_TIME).toString();
+        headers[1] = createCookie("refreshToken", refreshToken, jwtService.REFRESH_TOKEN_EXPIRATION_TIME).toString();
+
+        if (userCookie) {
+            headers[2] = createCookie("userID", aesUtil.encrypt(user.getId()), jwtService.TOKEN_EXPIRATION_TIME).toString();
+        }
+
+        return ResponseEntity.ok()
+                .header("Set-Cookie", headers)
+                .body("User connected");
+    }
+
+    private void saveToken(String userID, String token, TokenType type) {
+        Date expirationDate = jwtService.extractClaim(token, type.equals(TokenType.REFRESH_TOKEN), Claims::getExpiration);
+
+        Token saveToken = Token.builder()
+                .token(token)
+                .userID(userID)
+                .type(type)
+                .expirationDate(expirationDate)
+                .build();
+
+        tokenService.save(saveToken);
     }
 
 

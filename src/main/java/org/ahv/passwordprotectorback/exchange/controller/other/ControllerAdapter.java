@@ -241,7 +241,7 @@ public class ControllerAdapter {
         if (typeRequest != null) {
             User user = userService.findByUsername(typeRequest.getUsername());
 
-            if(user != null) {
+            if (user != null) {
                 type = Type.builder()
                         .name(typeRequest.getName())
                         .userID(user.getId())

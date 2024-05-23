@@ -15,7 +15,7 @@ public class JWTService {
     private final byte[] SECRET_KEY = generateSecretKey();
     private final byte[] REFRESH_SECRET_KEY = generateSecretKey();
     public final int TOKEN_EXPIRATION_TIME = 300000; //5m
-    public final int REFRESH_TOKEN_EXPIRATION_TIME = 600000; //10m
+    public final int REFRESH_TOKEN_EXPIRATION_TIME = 1800000; //30m
 
     public Claims extractAllClaims(String token, boolean refresh) {
         return Jwts.parserBuilder()
