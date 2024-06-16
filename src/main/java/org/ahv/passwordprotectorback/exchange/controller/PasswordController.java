@@ -19,10 +19,10 @@ import org.ahv.passwordprotectorback.service.TypeService;
 import org.ahv.passwordprotectorback.service.UserService;
 import org.ahv.passwordprotectorback.validator.NameValidator;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -46,30 +46,30 @@ public class PasswordController extends GlobalController<Password> {
 
     @GetMapping("/passwords")
     @ResponseStatus(HttpStatus.OK)
-    public List<BasicPasswordResponse> getPasswords() {
-        return passwordService.findAll().stream().map(adapter::convertToBasicPasswordResponse).toList();
+    public ResponseEntity<List<BasicPasswordResponse>> getPasswords() {
+        return getResponse(passwordService.findAll().stream().map(adapter::convertToBasicPasswordResponse).toList());
     }
 
 
     @GetMapping("/password/id/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public PasswordResponse getPasswordsByID(@PathVariable String id) {
-        return adapter.convertToPasswordResponse(passwordService.findObjectByID(id));
+    public ResponseEntity<PasswordResponse> getPasswordsByID(@PathVariable String id) {
+        return getResponse(adapter.convertToPasswordResponse(passwordService.findObjectByID(id)));
     }
 
 
     @GetMapping("/password/{elementID}/name/{identifier}")
     @ResponseStatus(HttpStatus.OK)
-    public PasswordResponse getPasswordsByIdentifier(@PathVariable String identifier, @PathVariable String elementID) {
-        return adapter.convertToPasswordResponse(passwordService.findByElementAndIdentifier(elementID, identifier));
+    public ResponseEntity<PasswordResponse> getPasswordsByIdentifier(@PathVariable String identifier, @PathVariable String elementID) {
+        return getResponse(adapter.convertToPasswordResponse(passwordService.findByElementAndIdentifier(elementID, identifier)));
     }
 
 
     @GetMapping("/showPassword/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public OnlyPasswordResponse showPassword(@PathVariable String id) {
+    public ResponseEntity<OnlyPasswordResponse> showPassword(@PathVariable String id) {
         //TODO : Decrypt password
-        return adapter.convertToOnlyPasswordResponse(passwordService.findObjectByID(id).getPassword());
+        return getResponse(adapter.convertToOnlyPasswordResponse(passwordService.findObjectByID(id).getPassword()));
     }
 
 
@@ -94,10 +94,11 @@ public class PasswordController extends GlobalController<Password> {
     @PutMapping("/password/elementID/{elementId}/id/{id}")
     @ResponseStatus(HttpStatus.OK)
     public BasicResponse updatePassword(@PathVariable String elementId, @PathVariable String id, @Valid @RequestBody PasswordUpdateRequest passwordRequest) {
-        return update(passwordRequest, elementId, id);
+        return updatePassword(passwordRequest, elementId, id);
     }
 
 
+    //Généralisation avec des FunctionalInterfaces
     @DeleteMapping("/password/elementId/{elementId}/id/{id}")
     @ResponseStatus(HttpStatus.OK)
     public BasicResponse deletePassword(@PathVariable String elementId, @PathVariable String id) {
@@ -120,25 +121,17 @@ public class PasswordController extends GlobalController<Password> {
     }
 
 
-    private BasicResponse update(PasswordUpdateRequest passwordRequest, String elementId, String id) {
-        Password passwordToUpdate = passwordService.findObjectByID(id);
-
-        if (passwordRequest != null && passwordToUpdate != null) {
+    private BasicResponse updatePassword(PasswordUpdateRequest passwordRequest, String elementId, String id) {
+        return update(passwordService, id, passwordToUpdate -> {
             verification(passwordRequest, elementId, passwordToUpdate.getIdentifier());
 
             passwordToUpdate.setIdentifier(getStringNotNull(passwordToUpdate.getIdentifier(), passwordRequest.getIdentifier()));
             passwordToUpdate.setPassword(getStringNotNull(passwordToUpdate.getPassword(), passwordRequest.getPassword()));
             passwordToUpdate.setComment(getStringNotNull(passwordToUpdate.getComment(), passwordRequest.getComment()));
-            passwordToUpdate.setModificationDate(LocalDate.now());
-
-            passwordService.save(passwordToUpdate);
-
-            return BasicResponse.builder().message("Password updated").build();
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Password not found");
-        }
+        });
     }
 
+    //Generalisation ?
     private void verification(PasswordUpdateRequest passwordRequest, String elementID, String oldIdentifier) {
         if (nameValidator.isNotValid(passwordService.findAllIdentifierByElementID(elementID), oldIdentifier, passwordRequest.getIdentifier())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identifier already exists");

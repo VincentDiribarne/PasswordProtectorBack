@@ -17,6 +17,7 @@ import org.ahv.passwordprotectorback.service.TypeService;
 import org.ahv.passwordprotectorback.service.UserService;
 import org.ahv.passwordprotectorback.validator.NameValidator;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -43,36 +44,36 @@ public class TypeController extends GlobalController<Type> {
 
     @GetMapping("/types")
     @ResponseStatus(HttpStatus.OK)
-    public List<BasicTypeResponse> getTypes() {
-        return typeService.findAll().stream().map(adapter::convertToBasicTypeResponse).toList();
+    public ResponseEntity<List<BasicTypeResponse>> getTypes() {
+        return getResponse(typeService.findAll().stream().map(adapter::convertToBasicTypeResponse).toList());
     }
 
 
     @GetMapping("/types/name/{name}")
     @ResponseStatus(HttpStatus.OK)
-    public List<BasicTypeResponse> getTypesByName(@PathVariable String name) {
-        return typeService.findAllByName(name).stream().map(adapter::convertToBasicTypeResponse).toList();
+    public ResponseEntity<List<BasicTypeResponse>> getTypesByName(@PathVariable String name) {
+        return getResponse(typeService.findAllByName(name).stream().map(adapter::convertToBasicTypeResponse).toList());
     }
 
 
     @GetMapping("/types/user/{userID}")
     @ResponseStatus(HttpStatus.OK)
-    public List<BasicTypeResponse> getTypesByUserID(@PathVariable String userID) {
-        return typeService.findAllByUserIDAndNull(userID).stream().map(adapter::convertToBasicTypeResponse).toList();
+    public ResponseEntity<List<BasicTypeResponse>> getTypesByUserID(@PathVariable String userID) {
+        return getResponse(typeService.findAllByUserIDAndNull(userID).stream().map(adapter::convertToBasicTypeResponse).toList());
     }
 
 
     @GetMapping("/type/id/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public TypeResponse getTypeByID(@PathVariable String id) {
-        return adapter.convertToTypeResponse(typeService.findObjectByID(id));
+    public ResponseEntity<TypeResponse> getTypeByID(@PathVariable String id) {
+        return getResponse(adapter.convertToTypeResponse(typeService.findObjectByID(id)));
     }
 
 
     @GetMapping("/type/name/{name}")
     @ResponseStatus(HttpStatus.OK)
-    public TypeResponse getTypeByName(@PathVariable String name) {
-        return adapter.convertToTypeResponse(typeService.findByName(name));
+    public ResponseEntity<TypeResponse> getTypeByName(@PathVariable String name) {
+        return getResponse(adapter.convertToTypeResponse(typeService.findByName(name)));
     }
 
 
