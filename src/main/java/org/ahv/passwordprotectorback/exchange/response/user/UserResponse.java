@@ -5,13 +5,14 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ahv.passwordprotectorback.exchange.response.element.BasicElementResponse;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.List;
 
 @Getter
 @Setter
 @Builder
-public class UserResponse {
+public class UserResponse implements Serializable {
     private String firstName;
     private String lastName;
     private String username;

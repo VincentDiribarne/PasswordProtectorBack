@@ -2,7 +2,6 @@ package org.ahv.passwordprotectorback.exchange.controller;
 
 import io.jsonwebtoken.Claims;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -64,33 +63,32 @@ public class UserController extends GlobalController<User> {
 
     @GetMapping("/users")
     @ResponseStatus(HttpStatus.OK)
-    public List<BasicUserResponse> getUsers() {
-        return userService.findAll().stream().map(adapter::convertToBasicUserResponse).toList();
+    public ResponseEntity<List<BasicUserResponse>> getUsers() {
+        return getResponse(userService.findAll().stream().map(adapter::convertToBasicUserResponse).toList());
     }
 
     @GetMapping("/user/id/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public UserResponse getUserByID(@PathVariable String id) {
-        return adapter.convertToUserResponse(userService.findObjectByID(id));
+    public ResponseEntity<UserResponse> getUserByID(@PathVariable String id) {
+        return getResponse(adapter.convertToUserResponse(userService.findObjectByID(id)));
     }
 
     @GetMapping("/user/name/{username}")
     @ResponseStatus(HttpStatus.OK)
-    public UserResponse getUserByName(@PathVariable String username) {
-        return adapter.convertToUserResponse(userService.findByUsername(username));
+    public ResponseEntity<UserResponse> getUserByName(@PathVariable String username) {
+        return getResponse(adapter.convertToUserResponse(userService.findByUsername(username)));
     }
 
 
     @GetMapping("/user/email/{email}")
     @ResponseStatus(HttpStatus.OK)
-    @RolesAllowed("ADMIN")
-    public UserResponse getUserByEmail(@PathVariable String email) {
-        return adapter.convertToUserResponse(userService.findByEmail(email));
+    public ResponseEntity<UserResponse> getUserByEmail(@PathVariable String email) {
+        return getResponse(adapter.convertToUserResponse(userService.findByEmail(email)));
     }
 
     @PostMapping("/user/login")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<String> login(@Valid @RequestBody UserConnectRequest userRequest) {
+    public ResponseEntity<BasicResponse> login(@Valid @RequestBody UserConnectRequest userRequest) {
         Authentication authentication = this.authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(userRequest.getUsername(), userRequest.getPassword())
         );
@@ -98,12 +96,12 @@ public class UserController extends GlobalController<User> {
 
         User user = userService.findByUsername(userRequest.getUsername());
 
-        return generateNewTokens(user, true);
+        return generateNewTokens(user);
     }
 
     @PostMapping("/user/refreshToken")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<String> refreshToken(HttpServletRequest request) {
+    public ResponseEntity<BasicResponse> refreshToken(HttpServletRequest request) {
         Cookie[] cookies = request.getCookies();
         String userID = null;
 
@@ -157,56 +155,7 @@ public class UserController extends GlobalController<User> {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid request");
         }
 
-        return generateNewTokens(user, false);
-    }
-
-    private ResponseCookie createCookie(String name, String value, int maxAge) {
-        return ResponseCookie.from(name, value)
-                .maxAge(maxAge)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")
-                .path(name.equals("token") ? "/" : "/api/user/refreshToken")
-                .build();
-    }
-
-    private ResponseEntity<String> generateNewTokens(User user, boolean userCookie) {
-        tokenService.findAllByUserID(user.getId())
-                .stream()
-                .filter(t -> !t.isAlreadyUsed())
-                .forEach(tokenService::delete);
-
-        String token = jwtService.generateToken(user.getUsername());
-        String refreshToken = jwtService.generateRefreshToken(user.getUsername());
-
-        saveToken(user.getId(), token, TokenType.TOKEN);
-        saveToken(user.getId(), refreshToken, TokenType.REFRESH_TOKEN);
-
-        String[] headers = new String[userCookie ? 3 : 2];
-
-        headers[0] = createCookie("token", token, jwtService.TOKEN_EXPIRATION_TIME).toString();
-        headers[1] = createCookie("refreshToken", refreshToken, jwtService.REFRESH_TOKEN_EXPIRATION_TIME).toString();
-
-        if (userCookie) {
-            headers[2] = createCookie("userID", aesUtil.encrypt(user.getId()), jwtService.TOKEN_EXPIRATION_TIME).toString();
-        }
-
-        return ResponseEntity.ok()
-                .header("Set-Cookie", headers)
-                .body("User connected");
-    }
-
-    private void saveToken(String userID, String token, TokenType type) {
-        Date expirationDate = jwtService.extractClaim(token, type.equals(TokenType.REFRESH_TOKEN), Claims::getExpiration);
-
-        Token saveToken = Token.builder()
-                .token(token)
-                .userID(userID)
-                .type(type)
-                .expirationDate(expirationDate)
-                .build();
-
-        tokenService.save(saveToken);
+        return generateNewTokens(user);
     }
 
 
@@ -234,9 +183,9 @@ public class UserController extends GlobalController<User> {
             userToUpdate.setModificationDate(LocalDate.now());
             userService.save(userToUpdate);
 
-            return BasicResponse.builder().message("User updated").build();
+            return BasicResponse.builder().message("Updated").build();
         } else {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
     }
 
@@ -249,7 +198,7 @@ public class UserController extends GlobalController<User> {
             userToUpdate.setPassword(password.getPassword());
             return save(userService, userToUpdate);
         } else {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
     }
 
@@ -276,5 +225,51 @@ public class UserController extends GlobalController<User> {
         if (nameValidator.isNotValid(userService.findAllEmails(), oldEmail, request.getEmail())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
         }
+    }
+
+    private ResponseEntity<BasicResponse> generateNewTokens(User user) {
+        tokenService.findAllByUserID(user.getId())
+                .stream()
+                .filter(t -> !t.isAlreadyUsed())
+                .forEach(tokenService::delete);
+
+        String token = jwtService.generateToken(user.getUsername());
+        String refreshToken = jwtService.generateRefreshToken(user.getUsername());
+
+        saveToken(user.getId(), token, TokenType.TOKEN);
+        saveToken(user.getId(), refreshToken, TokenType.REFRESH_TOKEN);
+
+        String[] headers = new String[3];
+
+        headers[0] = createCookie("token", token, 300).toString();
+        headers[1] = createCookie("refreshToken", refreshToken, 600).toString();
+        headers[2] = createCookie("userID", aesUtil.encrypt(user.getId()), 600).toString();
+
+        return ResponseEntity.ok()
+                .header("Set-Cookie", headers)
+                .body(BasicResponse.builder().message("User connected").build());
+    }
+
+    private void saveToken(String userID, String token, TokenType type) {
+        Date expirationDate = jwtService.extractClaim(token, type.equals(TokenType.REFRESH_TOKEN), Claims::getExpiration);
+
+        Token saveToken = Token.builder()
+                .token(token)
+                .userID(userID)
+                .type(type)
+                .expirationDate(expirationDate)
+                .build();
+
+        tokenService.save(saveToken);
+    }
+
+    private ResponseCookie createCookie(String name, String value, int maxAge) {
+        return ResponseCookie.from(name, value)
+                .maxAge(maxAge)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/")
+                .build();
     }
 }

@@ -43,7 +43,14 @@ public class JWTFilter extends OncePerRequestFilter {
         token = Arrays.stream(cookies).filter(cookie -> cookie.getName().equals("token")).findFirst().map(Cookie::getValue).orElse(null);
 
         if (token != null) {
-            Claims claims = jwtService.extractAllClaims(token, false);
+            Claims claims;
+
+            try {
+                claims = jwtService.extractAllClaims(token, false);
+            } catch (Exception e) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             User user = userService.findByUsername(claims.getSubject());
             Date expirationDate = claims.getExpiration();
@@ -64,9 +71,6 @@ public class JWTFilter extends OncePerRequestFilter {
             }
         } else {
             filterChain.doFilter(request, response);
-            return;
         }
-
-        filterChain.doFilter(request, response);
     }
 }

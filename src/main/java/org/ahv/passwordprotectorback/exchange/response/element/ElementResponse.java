@@ -7,13 +7,14 @@ import org.ahv.passwordprotectorback.exchange.response.password.BasicPasswordRes
 import org.ahv.passwordprotectorback.exchange.response.type.BasicTypeResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.BasicUserResponse;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.List;
 
 @Getter
 @Setter
 @Builder
-public class ElementResponse {
+public class ElementResponse implements Serializable {
     private String id;
     private String name;
     private String url;
