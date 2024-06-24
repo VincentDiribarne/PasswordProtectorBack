@@ -51,11 +51,7 @@ public class GlobalController<T extends PersistentEntity> {
     }
 
     protected <R> ResponseEntity<R> getResponse(R response) {
-        if (response != null) {
-            return ResponseEntity.ok(response);
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not Found");
-        }
+        return ResponseEntity.ok(response);
     }
 
     protected <R> ResponseEntity<List<R>> getResponse(List<R> response) {

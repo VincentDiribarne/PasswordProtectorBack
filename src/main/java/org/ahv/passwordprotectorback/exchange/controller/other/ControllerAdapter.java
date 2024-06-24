@@ -25,6 +25,7 @@ import org.ahv.passwordprotectorback.service.UserService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 
 @RequiredArgsConstructor
 public class ControllerAdapter {
@@ -35,7 +36,7 @@ public class ControllerAdapter {
 
     //Elements
     public BasicElementResponse convertToBasicElementResponse(Element element) {
-        BasicElementResponse elementResponse = null;
+        BasicElementResponse elementResponse = emptyBasicElementResponse();
 
         if (element != null) {
             elementResponse = BasicElementResponse.builder()
@@ -50,7 +51,7 @@ public class ControllerAdapter {
     }
 
     public ElementResponse convertToElementResponse(Element element) {
-        ElementResponse elementResponse = null;
+        ElementResponse elementResponse = emptyElementResponse();
 
         if (element != null) {
             elementResponse = ElementResponse.builder()
@@ -82,7 +83,7 @@ public class ControllerAdapter {
 
     //Passwords
     public BasicPasswordResponse convertToBasicPasswordResponse(Password password) {
-        BasicPasswordResponse passwordResponse = null;
+        BasicPasswordResponse passwordResponse = emptyBasicPasswordResponse();
 
         if (password != null) {
             passwordResponse = BasicPasswordResponse.builder()
@@ -102,7 +103,7 @@ public class ControllerAdapter {
     }
 
     public PasswordResponse convertToPasswordResponse(Password password) {
-        PasswordResponse passwordResponse = null;
+        PasswordResponse passwordResponse = emptyPasswordResponse();
 
         if (password != null) {
             passwordResponse = PasswordResponse.builder()
@@ -123,7 +124,7 @@ public class ControllerAdapter {
 
     //Type
     public BasicTypeResponse convertToBasicTypeResponse(Type type) {
-        BasicTypeResponse typeResponse = null;
+        BasicTypeResponse typeResponse = emptyBasicTypeResponse();
 
         if (type != null) {
             typeResponse = BasicTypeResponse.builder()
@@ -136,7 +137,7 @@ public class ControllerAdapter {
     }
 
     public TypeResponse convertToTypeResponse(Type type) {
-        TypeResponse typeResponse = null;
+        TypeResponse typeResponse = emptyTypeResponse();
 
         if (type != null) {
             typeResponse = TypeResponse.builder()
@@ -157,7 +158,7 @@ public class ControllerAdapter {
 
     //User
     public BasicUserResponse convertToBasicUserResponse(User user) {
-        BasicUserResponse userResponse = null;
+        BasicUserResponse userResponse = emptyBasicUserResponse();
 
         if (user != null) {
             userResponse = BasicUserResponse.builder()
@@ -170,7 +171,7 @@ public class ControllerAdapter {
     }
 
     public UserResponse convertToUserResponse(User user) {
-        UserResponse userResponse = null;
+        UserResponse userResponse = emptyUserResponse();
 
         if (user != null) {
             userResponse = UserResponse.builder()
@@ -272,5 +273,88 @@ public class ControllerAdapter {
         }
 
         return user;
+    }
+
+
+    //Empty
+    private PasswordResponse emptyPasswordResponse() {
+        return PasswordResponse.builder()
+                .id("")
+                .identifier("")
+                .comment("")
+                .element(emptyBasicElementResponse())
+                .creationDate(LocalDate.now())
+                .modificationDate(LocalDate.now())
+                .build();
+    }
+
+    private TypeResponse emptyTypeResponse() {
+        return TypeResponse.builder()
+                .id("")
+                .name("")
+                .user(emptyBasicUserResponse())
+                .creationDate(LocalDate.now())
+                .modificationDate(LocalDate.now())
+                .build();
+    }
+
+    private UserResponse emptyUserResponse() {
+        return UserResponse.builder()
+                .firstName("")
+                .lastName("")
+                .username("")
+                .email("")
+                .elements(new ArrayList<>())
+                .elementCount(0)
+                .creationDate(LocalDate.now())
+                .modificationDate(LocalDate.now())
+                .build();
+    }
+
+    private ElementResponse emptyElementResponse() {
+        return ElementResponse.builder()
+                .id("")
+                .name("")
+                .url("")
+                .description("")
+                .passwordCount(0)
+                .passwords(new ArrayList<>())
+                .type(emptyBasicTypeResponse())
+                .user(emptyBasicUserResponse())
+                .creationDate(LocalDate.now())
+                .modificationDate(LocalDate.now())
+                .build();
+    }
+
+    //Basic
+    private BasicElementResponse emptyBasicElementResponse() {
+        return BasicElementResponse.builder()
+                .id("")
+                .name("")
+                .url("")
+                .passwordCount(0)
+                .build();
+    }
+
+    private BasicPasswordResponse emptyBasicPasswordResponse() {
+        return BasicPasswordResponse.builder()
+                .id("")
+                .identifier("")
+                .comment("")
+                .build();
+    }
+
+    private BasicTypeResponse emptyBasicTypeResponse() {
+        return BasicTypeResponse.builder()
+                .id("")
+                .name("")
+                .build();
+    }
+
+    private BasicUserResponse emptyBasicUserResponse() {
+        return BasicUserResponse.builder()
+                .username("")
+                .elementCount(0)
+                .build();
     }
 }
