@@ -2,10 +2,15 @@ package org.ahv.passwordprotectorback.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.ahv.passwordprotectorback.model.Element;
+import org.ahv.passwordprotectorback.model.User;
 import org.ahv.passwordprotectorback.repository.ElementRepository;
+import org.ahv.passwordprotectorback.repository.UserRepository;
 import org.ahv.passwordprotectorback.service.ElementService;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -13,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ElementServiceImpl implements ElementService {
     private final ElementRepository elementRepository;
+    private final UserRepository userRepository;
 
     //Global method
     @Override
@@ -71,5 +77,17 @@ public class ElementServiceImpl implements ElementService {
     @Override
     public List<String> findAllURL() {
         return findAll().stream().map(Element::getUrl).toList();
+    }
+
+    @Override
+    public List<Element> findAllByUserName(String username) {
+        String userId = userRepository.findByUsername(username).getId();
+
+        if (userId != null) {
+            return elementRepository.findAllByUserID(userId);
+        }
+        else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Element not found");
+        }
     }
 }

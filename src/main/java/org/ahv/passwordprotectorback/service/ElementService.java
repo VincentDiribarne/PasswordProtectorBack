@@ -11,6 +11,8 @@ public interface ElementService extends GlobalService<Element> {
 
     List<Element> findAllByURL(String url);
 
+    List<Element> findAllByUserName(String username);
+
     Element findByURL(String url);
 
     Element findByName(String name);

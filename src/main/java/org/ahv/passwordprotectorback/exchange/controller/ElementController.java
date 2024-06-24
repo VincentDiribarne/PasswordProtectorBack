@@ -56,6 +56,11 @@ public class ElementController extends GlobalController<Element> {
         return elementService.findAllByName(name).stream().map(adapter::convertToBasicElementResponse).toList();
     }
 
+    @GetMapping("/elements/user/{name}")
+    @ResponseStatus(HttpStatus.OK)
+    public List<Element> getElementsByUserName(@PathVariable String name) {
+        return elementService.findAllByUserName(name);
+    }
 
     @GetMapping("/elements/url/{url}")
     @ResponseStatus(HttpStatus.OK)
