@@ -20,7 +20,7 @@ public class GlobalController<T extends PersistentEntity> {
         }
     }
 
-    public BasicResponse update(GlobalService<T> service, String id, Updater<T> updater) {
+    public BasicResponse update(GlobalService<T> service, String id, Updater<T> updater) throws Exception {
         T objectToUpdate = service.findObjectByID(id);
 
         if (objectToUpdate != null) {
@@ -55,15 +55,11 @@ public class GlobalController<T extends PersistentEntity> {
     }
 
     protected <R> ResponseEntity<List<R>> getResponse(List<R> response) {
-        if (response != null) {
-            return ResponseEntity.ok(response);
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Not Found");
-        }
+        return ResponseEntity.ok(response);
     }
 
     @FunctionalInterface
     public interface Updater<T> {
-        void update(T objectToUpdate);
+        void update(T objectToUpdate) throws Exception;
     }
 }

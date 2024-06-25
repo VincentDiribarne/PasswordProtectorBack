@@ -93,17 +93,18 @@ public class ElementController extends GlobalController<Element> {
     @PostMapping("/element")
     @ResponseStatus(HttpStatus.CREATED)
     public BasicResponse saveElement(@Valid @RequestBody ElementRequest elementRequest) {
-        verification(elementRequest, null, null);
+        //verification(elementRequest, null, null);
 
         User user = userService.findByUsername(elementRequest.getUsername());
         if (user != null) {
             user.setElementCount(user.getElementCount() + 1);
             userService.save(user);
-
-            return save(elementService, adapter.convertToElement(elementRequest));
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
+
+        elementService.save(adapter.convertToElement(elementRequest));
+        Element savedElement = elementService.findByName(elementRequest.getName());
+
+        return BasicResponse.builder().message(savedElement.getId()).build();
     }
 
 
@@ -132,7 +133,7 @@ public class ElementController extends GlobalController<Element> {
         Element elementToUpdate = elementService.findObjectByID(id);
 
         if (elementRequest != null && elementToUpdate != null) {
-            verification(elementRequest, elementToUpdate.getName(), elementToUpdate.getUrl());
+            //verification(elementRequest, elementToUpdate.getName(), elementToUpdate.getUrl());
 
             elementToUpdate.setName(getStringNotNull(elementToUpdate.getName(), elementRequest.getName()));
             elementToUpdate.setUrl(getStringNotNull(elementToUpdate.getUrl(), elementRequest.getUrl()));

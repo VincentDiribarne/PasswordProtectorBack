@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -56,10 +57,17 @@ public class TypeController extends GlobalController<Type> {
     }
 
 
-    @GetMapping("/types/user/{userID}")
+    @GetMapping("/types/user/{username}")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<List<BasicTypeResponse>> getTypesByUserID(@PathVariable String userID) {
-        return getResponse(typeService.findAllByUserIDAndNull(userID).stream().map(adapter::convertToBasicTypeResponse).toList());
+    public ResponseEntity<List<BasicTypeResponse>> getTypesByUsername(@PathVariable String username) {
+        User user = userService.findByUsername(username);
+        List<BasicTypeResponse> types = new ArrayList<>();
+
+        if (user != null) {
+            types = typeService.findAllByUserId(user.getId()).stream().map(adapter::convertToBasicTypeResponse).toList();
+        }
+
+        return getResponse(types);
     }
 
 

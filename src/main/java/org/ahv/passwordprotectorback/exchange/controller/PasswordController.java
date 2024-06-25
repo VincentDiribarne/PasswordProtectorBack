@@ -13,6 +13,7 @@ import org.ahv.passwordprotectorback.exchange.response.password.OnlyPasswordResp
 import org.ahv.passwordprotectorback.exchange.response.password.PasswordResponse;
 import org.ahv.passwordprotectorback.model.Element;
 import org.ahv.passwordprotectorback.model.Password;
+import org.ahv.passwordprotectorback.model.User;
 import org.ahv.passwordprotectorback.service.ElementService;
 import org.ahv.passwordprotectorback.service.PasswordService;
 import org.ahv.passwordprotectorback.service.TypeService;
@@ -24,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+
+import static org.ahv.passwordprotectorback.security.PasswordSecurity.*;
 
 @RestController
 @RequestMapping("/api/")
@@ -67,20 +70,23 @@ public class PasswordController extends GlobalController<Password> {
 
     @GetMapping("/showPassword/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public ResponseEntity<OnlyPasswordResponse> showPassword(@PathVariable String id) {
-        //TODO : Decrypt password
-        return getResponse(adapter.convertToOnlyPasswordResponse(passwordService.findObjectByID(id).getPassword()));
-    }
+    public ResponseEntity<OnlyPasswordResponse> showPassword(@PathVariable String id) throws Exception {
+        Password password = passwordService.findObjectByID(id);
+        Element element = elementService.findObjectByID(password.getElementID());
+        User user = userService.findObjectByID(element.getUserID());
 
+        String clearPassword = decryptPassword(password.getPassword(), generateKey(user.getId()));
+        return getResponse(adapter.convertToOnlyPasswordResponse(clearPassword));
+    }
 
     @PostMapping("/password")
     @ResponseStatus(HttpStatus.CREATED)
-    public BasicResponse savePassword(@Valid @RequestBody PasswordRequest passwordRequest) {
-        verification(passwordRequest, null, passwordRequest.getElementID());
-
-        //TODO: Encrypt password
+    public BasicResponse savePassword(@Valid @RequestBody PasswordRequest passwordRequest) throws Exception {
+        //verification(passwordRequest, null, passwordRequest.getElementID());
         Element element = elementService.findObjectByID(passwordRequest.getElementID());
+
         if (element != null) {
+            passwordRequest.setPassword(encryptPassword(passwordRequest.getPassword(), generateKey(element.getUserID())));
             element.setPasswordCount(element.getPasswordCount() + 1);
             elementService.save(element);
 
@@ -91,10 +97,21 @@ public class PasswordController extends GlobalController<Password> {
     }
 
 
-    @PutMapping("/password/elementID/{elementId}/id/{id}")
+    @PutMapping("/password/id/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public BasicResponse updatePassword(@PathVariable String elementId, @PathVariable String id, @Valid @RequestBody PasswordUpdateRequest passwordRequest) {
-        return updatePassword(passwordRequest, elementId, id);
+    public BasicResponse updatePassword(@PathVariable String id, @Valid @RequestBody PasswordUpdateRequest passwordRequest) throws Exception {
+        String elementID = passwordService.findObjectByID(id).getElementID();
+        Element element = elementService.findObjectByID(elementID);
+
+        return update(passwordService, id, passwordToUpdate -> {
+            //verification(passwordRequest, elementId, passwordToUpdate.getIdentifier());
+
+            passwordToUpdate.setIdentifier(getStringNotNull(passwordToUpdate.getIdentifier(), passwordRequest.getIdentifier()));
+
+            String password = encryptPassword(passwordRequest.getPassword(), generateKey(element.getUserID()));
+            passwordToUpdate.setPassword(getStringNotNull(passwordToUpdate.getPassword(), password));
+            passwordToUpdate.setComment(getStringNotNull(passwordToUpdate.getComment(), passwordRequest.getComment()));
+        });
     }
 
 
@@ -118,17 +135,6 @@ public class PasswordController extends GlobalController<Password> {
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Element not found");
         }
-    }
-
-
-    private BasicResponse updatePassword(PasswordUpdateRequest passwordRequest, String elementId, String id) {
-        return update(passwordService, id, passwordToUpdate -> {
-            verification(passwordRequest, elementId, passwordToUpdate.getIdentifier());
-
-            passwordToUpdate.setIdentifier(getStringNotNull(passwordToUpdate.getIdentifier(), passwordRequest.getIdentifier()));
-            passwordToUpdate.setPassword(getStringNotNull(passwordToUpdate.getPassword(), passwordRequest.getPassword()));
-            passwordToUpdate.setComment(getStringNotNull(passwordToUpdate.getComment(), passwordRequest.getComment()));
-        });
     }
 
     //Generalisation ?
