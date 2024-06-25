@@ -12,4 +12,10 @@ public interface UserService extends GlobalService<User> {
     List<String> findAllUsernames();
 
     List<String> findAllEmails();
+
+    // Reset password
+    void createPasswordResetTokenForUser(User user, String token);
+
+    void changePassword(User user, String password);
+
 }

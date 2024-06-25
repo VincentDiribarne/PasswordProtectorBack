@@ -6,10 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class UpdatePasswordRequest {
+public class SendMailRequest {
     @NotBlank
-    private String token;
-
-    @NotBlank
-    private String password;
+    private String mail;
 }

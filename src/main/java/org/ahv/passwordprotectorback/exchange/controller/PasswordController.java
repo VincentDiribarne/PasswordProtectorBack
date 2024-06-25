@@ -7,16 +7,15 @@ import org.ahv.passwordprotectorback.exchange.controller.other.ControllerAdapter
 import org.ahv.passwordprotectorback.exchange.controller.other.GlobalController;
 import org.ahv.passwordprotectorback.exchange.request.password.PasswordRequest;
 import org.ahv.passwordprotectorback.exchange.request.password.PasswordUpdateRequest;
+import org.ahv.passwordprotectorback.exchange.request.password.SharePasswordRequest;
 import org.ahv.passwordprotectorback.exchange.response.BasicResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.BasicPasswordResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.OnlyPasswordResponse;
 import org.ahv.passwordprotectorback.exchange.response.password.PasswordResponse;
 import org.ahv.passwordprotectorback.model.Element;
 import org.ahv.passwordprotectorback.model.Password;
-import org.ahv.passwordprotectorback.service.ElementService;
-import org.ahv.passwordprotectorback.service.PasswordService;
-import org.ahv.passwordprotectorback.service.TypeService;
-import org.ahv.passwordprotectorback.service.UserService;
+import org.ahv.passwordprotectorback.model.User;
+import org.ahv.passwordprotectorback.service.*;
 import org.ahv.passwordprotectorback.validator.NameValidator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +32,7 @@ public class PasswordController extends GlobalController<Password> {
     private final ElementService elementService;
     private final PasswordService passwordService;
     private final TypeService typeService;
+    private final EmailService emailService;
 
     private ControllerAdapter adapter;
     private NameValidator nameValidator;
@@ -117,6 +117,25 @@ public class PasswordController extends GlobalController<Password> {
             return delete(passwordService, id);
         } else {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Element not found");
+        }
+    }
+
+    @PostMapping("/password/share")
+    @ResponseStatus(HttpStatus.OK)
+    public BasicResponse sharePassword(@Valid @RequestBody SharePasswordRequest sharePasswordRequest) {
+        if (sharePasswordRequest.getEmail() == null) {
+            sharePasswordRequest.setEmail("default@email.com");
+        }
+
+        Password password = passwordService.findObjectByID(sharePasswordRequest.getPasswordId());
+        User user = userService.findByUsername(sharePasswordRequest.getUsername());
+
+        if (password != null && user != null) {
+            emailService.sendSharePasswordEmail(sharePasswordRequest.getEmail(), user.getId());
+
+            return BasicResponse.builder().message("Password shared successfully").build();
+        } else {
+            return BasicResponse.builder().message("Password or user not found").build();
         }
     }
 
