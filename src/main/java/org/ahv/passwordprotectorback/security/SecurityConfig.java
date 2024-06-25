@@ -61,7 +61,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173")); // Ajoutez vos propres origines autorisées
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST")); // Ajoutez vos propres méthodes autorisées
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE")); // Ajoutez vos propres méthodes autorisées
         configuration.setAllowedHeaders(List.of("*")); // Ajoutez vos propres en-têtes autorisés
         configuration.setAllowCredentials(true); // Configurez si les cookies sont autorisés ou non
 

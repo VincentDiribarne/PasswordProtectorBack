@@ -114,10 +114,10 @@ public class ElementController extends GlobalController<Element> {
     }
 
 
-    @DeleteMapping("/element/user/{userId}/id/{id}")
+    @DeleteMapping("/element/user/{userName}/id/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public BasicResponse deleteElement(@PathVariable String userId, @PathVariable String id) {
-        User user = userService.findObjectByID(userId);
+    public BasicResponse deleteElement(@PathVariable String userName, @PathVariable String id) {
+        User user = userService.findByUsername(userName);
 
         if (user != null) {
             return delete(user, id);
