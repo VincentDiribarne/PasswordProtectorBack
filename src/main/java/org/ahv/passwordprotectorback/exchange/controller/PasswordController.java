@@ -16,11 +16,6 @@ import org.ahv.passwordprotectorback.model.Element;
 import org.ahv.passwordprotectorback.model.Password;
 import org.ahv.passwordprotectorback.model.User;
 import org.ahv.passwordprotectorback.service.*;
-import org.ahv.passwordprotectorback.model.User;
-import org.ahv.passwordprotectorback.service.ElementService;
-import org.ahv.passwordprotectorback.service.PasswordService;
-import org.ahv.passwordprotectorback.service.TypeService;
-import org.ahv.passwordprotectorback.service.UserService;
 import org.ahv.passwordprotectorback.validator.NameValidator;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -158,17 +153,6 @@ public class PasswordController extends GlobalController<Password> {
         } else {
             return BasicResponse.builder().message("Password or user not found").build();
         }
-    }
-
-
-    private BasicResponse updatePassword(PasswordUpdateRequest passwordRequest, String elementId, String id) {
-        return update(passwordService, id, passwordToUpdate -> {
-            verification(passwordRequest, elementId, passwordToUpdate.getIdentifier());
-
-            passwordToUpdate.setIdentifier(getStringNotNull(passwordToUpdate.getIdentifier(), passwordRequest.getIdentifier()));
-            passwordToUpdate.setPassword(getStringNotNull(passwordToUpdate.getPassword(), passwordRequest.getPassword()));
-            passwordToUpdate.setComment(getStringNotNull(passwordToUpdate.getComment(), passwordRequest.getComment()));
-        });
     }
 
     //Generalisation ?
