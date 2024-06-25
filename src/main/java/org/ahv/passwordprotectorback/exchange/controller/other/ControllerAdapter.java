@@ -14,14 +14,8 @@ import org.ahv.passwordprotectorback.exchange.response.type.BasicTypeResponse;
 import org.ahv.passwordprotectorback.exchange.response.type.TypeResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.BasicUserResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.UserResponse;
-import org.ahv.passwordprotectorback.model.Element;
-import org.ahv.passwordprotectorback.model.Password;
-import org.ahv.passwordprotectorback.model.Type;
-import org.ahv.passwordprotectorback.model.User;
-import org.ahv.passwordprotectorback.service.ElementService;
-import org.ahv.passwordprotectorback.service.PasswordService;
-import org.ahv.passwordprotectorback.service.TypeService;
-import org.ahv.passwordprotectorback.service.UserService;
+import org.ahv.passwordprotectorback.model.*;
+import org.ahv.passwordprotectorback.service.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.time.LocalDate;
