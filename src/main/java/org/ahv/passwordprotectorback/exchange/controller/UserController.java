@@ -8,10 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.ahv.passwordprotectorback.exchange.controller.other.ControllerAdapter;
 import org.ahv.passwordprotectorback.exchange.controller.other.GlobalController;
-import org.ahv.passwordprotectorback.exchange.request.user.UpdatePasswordRequest;
-import org.ahv.passwordprotectorback.exchange.request.user.UserConnectRequest;
-import org.ahv.passwordprotectorback.exchange.request.user.UserRequest;
-import org.ahv.passwordprotectorback.exchange.request.user.UserUpdateRequest;
+import org.ahv.passwordprotectorback.exchange.request.user.*;
 import org.ahv.passwordprotectorback.exchange.response.BasicResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.BasicUserResponse;
 import org.ahv.passwordprotectorback.exchange.response.user.UserResponse;
@@ -29,6 +26,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -36,10 +34,12 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
+@CrossOrigin("*")
 public class UserController extends GlobalController<User> {
     private final UserService userService;
     private final ElementService elementService;
@@ -48,6 +48,7 @@ public class UserController extends GlobalController<User> {
     private final JWTService jwtService;
     private final TokenService tokenService;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
     private final AESUtil aesUtil;
 
     private ControllerAdapter adapter;
@@ -89,9 +90,7 @@ public class UserController extends GlobalController<User> {
     @PostMapping("/user/login")
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<BasicResponse> login(@Valid @RequestBody UserConnectRequest userRequest) {
-        Authentication authentication = this.authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(userRequest.getUsername(), userRequest.getPassword())
-        );
+        Authentication authentication = this.authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(userRequest.getUsername(), userRequest.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         User user = userService.findByUsername(userRequest.getUsername());
@@ -106,17 +105,9 @@ public class UserController extends GlobalController<User> {
         String userID = null;
 
         if (cookies != null) {
-            refreshToken = Arrays.stream(cookies)
-                    .filter(cookie -> cookie.getName().equals("refreshToken"))
-                    .findFirst()
-                    .map(Cookie::getValue)
-                    .orElse(null);
+            refreshToken = Arrays.stream(cookies).filter(cookie -> cookie.getName().equals("refreshToken")).findFirst().map(Cookie::getValue).orElse(null);
 
-            userID = Arrays.stream(cookies)
-                    .filter(cookie -> cookie.getName().equals("userID"))
-                    .findFirst()
-                    .map(cookie -> aesUtil.decrypt(cookie.getValue()))
-                    .orElse(null);
+            userID = Arrays.stream(cookies).filter(cookie -> cookie.getName().equals("userID")).findFirst().map(cookie -> aesUtil.decrypt(cookie.getValue())).orElse(null);
         }
 
         if (refreshToken == null || userID == null) {
@@ -129,9 +120,7 @@ public class UserController extends GlobalController<User> {
         }
 
         List<Token> tokens = tokenService.findAllByUserID(user.getId());
-        List<Token> validTokens = tokens.stream()
-                .filter(t -> t.getToken().equals(refreshToken))
-                .toList();
+        List<Token> validTokens = tokens.stream().filter(t -> t.getToken().equals(refreshToken)).toList();
 
         if (validTokens.isEmpty()) {
             //TODO: Ban user ?
@@ -162,9 +151,13 @@ public class UserController extends GlobalController<User> {
     @PostMapping("/user/createAccount")
     @ResponseStatus(HttpStatus.CREATED)
     public BasicResponse saveUser(@Valid @RequestBody UserRequest userRequest) {
-        verification(userRequest, null, null);
+        String response = verification(userRequest, null, null);
 
-        return save(userService, adapter.convertToUser(userRequest));
+        if (response != null) {
+            return BasicResponse.builder().message(response).build();
+        } else {
+            return save(userService, adapter.convertToUser(userRequest));
+        }
     }
 
 
@@ -174,18 +167,22 @@ public class UserController extends GlobalController<User> {
         User userToUpdate = userService.findObjectByID(id);
 
         if (userToUpdate != null) {
-            verification(user, userToUpdate.getUsername(), userToUpdate.getEmail());
+            String response = verification(user, userToUpdate.getUsername(), userToUpdate.getEmail());
 
-            userToUpdate.setFirstName(user.getFirstName());
-            userToUpdate.setLastName(user.getLastName());
-            userToUpdate.setUsername(user.getUsername());
-            userToUpdate.setEmail(user.getEmail());
-            userToUpdate.setModificationDate(LocalDate.now());
-            userService.save(userToUpdate);
+            if (response != null) {
+                return BasicResponse.builder().message(response).build();
+            } else {
+                userToUpdate.setFirstName(user.getFirstName());
+                userToUpdate.setLastName(user.getLastName());
+                userToUpdate.setUsername(user.getUsername());
+                userToUpdate.setEmail(user.getEmail());
+                userToUpdate.setModificationDate(LocalDate.now());
+                userService.save(userToUpdate);
 
-            return BasicResponse.builder().message("Updated").build();
+                return BasicResponse.builder().message("Updated").build();
+            }
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+            return BasicResponse.builder().message("User not found").build();
         }
     }
 
@@ -195,10 +192,12 @@ public class UserController extends GlobalController<User> {
         User userToUpdate = userService.findObjectByID(id);
 
         if (userToUpdate != null) {
-            userToUpdate.setPassword(password.getPassword());
+            BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+            userToUpdate.setPassword(passwordEncoder.encode(password.getPassword()));
+            //userToUpdate.setPassword(password.getPassword());
             return save(userService, userToUpdate);
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+            return BasicResponse.builder().message("User not found").build();
         }
     }
 
@@ -216,22 +215,60 @@ public class UserController extends GlobalController<User> {
         return delete(userService, id);
     }
 
+
+
+    // Erreur : Cannot call sendError() after the response has been committed -> pourquoi ? (sur les deux méthodes)
+    @PostMapping("/user/sendMailPasswordReset")
+    @ResponseStatus(HttpStatus.OK)
+    public BasicResponse handlePasswordReset(@Valid @RequestBody SendMailRequest request) {
+        User user = userService.findByEmail(request.getMail());
+
+        if (user != null) {
+            String token = UUID.randomUUID().toString();
+            userService.createPasswordResetTokenForUser(user, token);
+            emailService.sendPasswordResetEmail(user.getEmail(), token);
+        }
+
+        return BasicResponse.builder().message("Email send").build();
+    }
+
+    @PostMapping("/user/changePassword")
+    @ResponseStatus(HttpStatus.OK)
+    public BasicResponse handlePasswordChange(@Valid @RequestBody UpdatePasswordRequest request) {
+        Token resetToken = tokenService.findByToken(request.getToken());
+
+        if (resetToken == null || resetToken.isAlreadyUsed() || resetToken.getExpirationDate().before(new Date())) {
+            return BasicResponse.builder().message("Token expired").build();
+        }
+
+        User user = userService.findObjectByID(resetToken.getUserID());
+
+        if(user != null) {
+            userService.changePassword(user, request.getPassword());
+            tokenService.delete(resetToken);
+            return BasicResponse.builder().message("Password changed successfully").build();
+        }
+
+        return BasicResponse.builder().message("Error").build();
+    }
+
     //Method
-    private void verification(UserUpdateRequest request, String oldUsername, String oldEmail) {
+    private String verification(UserUpdateRequest request, String oldUsername, String oldEmail) {
+        String response = null;
+
         if (nameValidator.isNotValid(userService.findAllUsernames(), oldUsername, request.getUsername())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username already exists");
+            response = "Username already exists";
         }
 
         if (nameValidator.isNotValid(userService.findAllEmails(), oldEmail, request.getEmail())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
+            response = "Email already exists";
         }
+
+        return response;
     }
 
     private ResponseEntity<BasicResponse> generateNewTokens(User user) {
-        tokenService.findAllByUserID(user.getId())
-                .stream()
-                .filter(t -> !t.isAlreadyUsed())
-                .forEach(tokenService::delete);
+        tokenService.findAllByUserID(user.getId()).stream().filter(t -> !t.isAlreadyUsed()).forEach(tokenService::delete);
 
         String token = jwtService.generateToken(user.getUsername());
         String refreshToken = jwtService.generateRefreshToken(user.getUsername());
@@ -245,31 +282,18 @@ public class UserController extends GlobalController<User> {
         headers[1] = createCookie("refreshToken", refreshToken, 600).toString();
         headers[2] = createCookie("userID", aesUtil.encrypt(user.getId()), 600).toString();
 
-        return ResponseEntity.ok()
-                .header("Set-Cookie", headers)
-                .body(BasicResponse.builder().message("User connected").build());
+        return ResponseEntity.ok().header("Set-Cookie", headers).body(BasicResponse.builder().message("User connected").build());
     }
 
     private void saveToken(String userID, String token, TokenType type) {
         Date expirationDate = jwtService.extractClaim(token, type.equals(TokenType.REFRESH_TOKEN), Claims::getExpiration);
 
-        Token saveToken = Token.builder()
-                .token(token)
-                .userID(userID)
-                .type(type)
-                .expirationDate(expirationDate)
-                .build();
+        Token saveToken = Token.builder().token(token).userID(userID).type(type).expirationDate(expirationDate).build();
 
         tokenService.save(saveToken);
     }
 
     private ResponseCookie createCookie(String name, String value, int maxAge) {
-        return ResponseCookie.from(name, value)
-                .maxAge(maxAge)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")
-                .path("/")
-                .build();
+        return ResponseCookie.from(name, value).maxAge(maxAge).httpOnly(true).secure(true).sameSite("Strict").path("/").build();
     }
 }

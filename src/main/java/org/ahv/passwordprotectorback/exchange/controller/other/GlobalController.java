@@ -16,7 +16,7 @@ public class GlobalController<T extends PersistentEntity> {
             service.save(object);
             return BasicResponse.builder().message("Saved").build();
         } else {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Object is null");
+            return BasicResponse.builder().message("Object is null").build();
         }
     }
 
@@ -31,7 +31,7 @@ public class GlobalController<T extends PersistentEntity> {
 
             return BasicResponse.builder().message("Updated").build();
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Password not found");
+            return BasicResponse.builder().message("Not Found").build();
         }
     }
 
@@ -42,7 +42,7 @@ public class GlobalController<T extends PersistentEntity> {
             service.delete(object);
             return BasicResponse.builder().message("Deleted").build();
         } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Object not found");
+            return BasicResponse.builder().message("Not Found").build();
         }
     }
 

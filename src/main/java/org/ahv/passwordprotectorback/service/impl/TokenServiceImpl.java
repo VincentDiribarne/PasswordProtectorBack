@@ -19,6 +19,11 @@ public class TokenServiceImpl implements TokenService {
     }
 
     @Override
+    public Token findByToken(String token) {
+        return tokenRepository.findByToken(token);
+    }
+
+    @Override
     public void save(Token token) {
         tokenRepository.save(token);
     }

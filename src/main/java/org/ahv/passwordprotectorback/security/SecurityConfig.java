@@ -29,6 +29,8 @@ public class SecurityConfig {
                         "/api/user/createAccount",
                         "/api/user/forgotPassword",
                         "/api/user/refreshToken",
+                        "/user/sendMailPasswordReset",
+                        "/user/changePassword",
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/configuration/ui",
